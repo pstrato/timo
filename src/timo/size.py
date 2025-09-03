@@ -2,7 +2,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from timo.dimension import Dimension
+    from timo.dimension import Dimension, SingleDimension
+    from timo.shape import Shape
+    from typing import Iterable
 
 
 class Size:
@@ -19,10 +21,10 @@ class Size:
         return self.size is not None
 
     def __str__(self):
-        return f"{self.dimension} {self.size or '*'}"
+        return f"{self.dimension}{self.size or '*'}"
 
     def __repr__(self):
-        return f"{self.dimension} {self.size or '*'}"
+        return str(self)
 
     def __eq__(self, value):
         if not isinstance(value, Size):
@@ -35,28 +37,38 @@ class Size:
 
         return self.dimension != value.dimension or self.size != value.size
 
-    def __add__(self, value: Size):
-        if not isinstance(value, Size):
-            raise ValueError()
-        if isinstance(self, MultiSize):
-            return MultiSize(*self.sizes, value)
-        if isinstance(self, SingleSize):
-            return MultiSize(self, value)
+    def __add__(self, value: SingleDimension | Size):
+        from timo.dimension import SingleDimension
+
+        if isinstance(value, SingleDimension):
+            return GroupedSize(*self._single_sizes(), size(value, None))
+        if isinstance(value, Size):
+            return GroupedSize(*self._single_sizes(), *value._single_sizes())
         raise ValueError()
 
-    def shape(self):
+    def __or__(self, value: SingleDimension | Size | Shape):
         from timo.shape import Shape
+        from timo.dimension import SingleDimension
 
-        return Shape(self)
+        if isinstance(value, SingleDimension):
+            return Shape(self, size(value, None))
+        if isinstance(value, Size):
+            return Shape(self, value)
+        if isinstance(value, Shape):
+            return Shape(self, *value.sizes)
+        raise ValueError()
+
+    def _single_sizes(self) -> Iterable[SingleSize]:
+        raise NotImplementedError()
 
 
 class SingleSize(Size):
     __slots__ = ["_dimension", "_size"]
 
-    def __init__(self, dimension: Dimension, size: int):
-        from timo.dimension import Dimension
+    def __init__(self, dimension: SingleDimension, size: int):
+        from timo.dimension import SingleDimension
 
-        assert isinstance(dimension, Dimension)
+        assert isinstance(dimension, SingleDimension)
         assert size is None or isinstance(size, int)
 
         self._dimension = dimension
@@ -70,6 +82,9 @@ class SingleSize(Size):
     def size(self):
         return self._size
 
+    def _single_sizes(self):
+        yield self
+
 
 def size(dimension: Dimension | str, size: int | None):
     from timo.dimension import dim
@@ -77,15 +92,15 @@ def size(dimension: Dimension | str, size: int | None):
     return SingleSize(dim(dimension), size)
 
 
-class MultiSize(Size):
+class GroupedSize(Size):
     __slots__ = ["_dimension", "_size", "_sizes"]
 
-    def __init__(self, *sizes: Size):
-        from timo.dimension import MultiDimension
+    def __init__(self, *sizes: SingleSize):
+        from timo.dimension import GroupedDimension
 
         assert len(sizes) > 0
         for s in sizes:
-            assert isinstance(s, Size)
+            assert isinstance(s, SingleSize)
 
         self._sizes = sizes
         self._size = 1
@@ -97,7 +112,7 @@ class MultiSize(Size):
         dimensions = []
         for s in sizes:
             dimensions.append(s.dimension)
-        self._dimension = MultiDimension(*dimensions)
+        self._dimension = GroupedDimension(*dimensions)
 
     @property
     def dimension(self):
@@ -111,9 +126,12 @@ class MultiSize(Size):
     def sizes(self):
         return self._sizes
 
+    def _single_sizes(self):
+        return self._sizes
+
 
 def sizes(**dims_sizes):
     sizes = []
     for dim, dim_size in dims_sizes.items():
         sizes.append(size(dim, dim_size))
-    return MultiSize(*sizes)
+    return GroupedSize(*sizes)

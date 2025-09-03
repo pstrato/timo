@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from timo.dimension import SingleDimension
     from timo.size import Size
 
 
@@ -15,9 +16,12 @@ class Shape:
     def sizes(self):
         return self._sizes
 
-    def __add__(self, value: Size | Shape):
-        from timo.size import Size
+    def __or__(self, value: SingleDimension | Size | Shape):
+        from timo.dimension import SingleDimension
+        from timo.size import size
 
+        if isinstance(value, SingleDimension):
+            return Shape(*self.sizes, size(value, None))
         if isinstance(value, Size):
             return Shape(*self.sizes, value)
         if isinstance(value, Shape):
@@ -38,6 +42,12 @@ class Shape:
 
     def __getitem__(self, index: int):
         return self.sizes[index]
+
+    def __str__(self):
+        return "|".join(map(str, self.sizes))
+
+    def __repr__(self):
+        return str(self)
 
 
 def shape(*sizes: Size):

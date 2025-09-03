@@ -10,7 +10,7 @@ class Dimension:
         return self.name
 
     def __repr__(self):
-        return self.name
+        return str(self)
 
     def __eq__(self, value):
         if not isinstance(value, Dimension):
@@ -23,17 +23,11 @@ class Dimension:
         return self.name != value.name
 
     def __add__(self, value: Dimension | str):
-        if isinstance(value, Dimension):
-            dim = value
-        elif isinstance(value, str):
-            dim = SingleDimension(value)
-        else:
-            raise ValueError()
-        if isinstance(self, MultiDimension):
-            return MultiDimension(*self.dimensions, dim)
-        if isinstance(self, SingleDimension):
-            return MultiDimension(self, dim)
-        raise ValueError()
+        value = dim(value)
+        return GroupedDimension(*self._single_dimensions(), *value._single_dimensions())
+
+    def _single_dimensions(self):
+        raise NotImplementedError()
 
 
 class SingleDimension(Dimension):
@@ -59,15 +53,24 @@ class SingleDimension(Dimension):
 
         return SingleSize(self, size)
 
+    def _single_dimensions(self):
+        yield self
 
-def dim(name: str):
-    return SingleDimension(name)
+
+def dim(name_or_dim: str | Dimension):
+    from timo.dimension import Dimension
+
+    if isinstance(name_or_dim, Dimension):
+        return name_or_dim
+    if isinstance(name_or_dim, str):
+        return SingleDimension(name_or_dim)
+    raise ValueError()
 
 
-class MultiDimension(Dimension):
+class GroupedDimension(Dimension):
     __slots__ = ["_name", "_dimensions"]
 
-    def __init__(self, *dimensions: Dimension):
+    def __init__(self, *dimensions: SingleDimension):
         assert len(dimensions) > 0
 
         self._dimensions = dimensions
@@ -84,14 +87,12 @@ class MultiDimension(Dimension):
     def __getitem__(self, index: int):
         return self._dimensions[index]
 
+    def _single_dimensions(self):
+        return self._dimensions
 
-def dims(*names_or_dims: str | Dimension):
+
+def group(*names_or_dims: str | Dimension):
     dimensions = []
     for name_or_dim in names_or_dims:
-        if isinstance(name_or_dim, Dimension):
-            dimensions.append(name_or_dim)
-        elif isinstance(name_or_dim, str):
-            dimensions.append(Dimension(name_or_dim))
-        else:
-            raise ValueError()
-    return MultiDimension(*dimensions)
+        dimensions.append(dim(name_or_dim))
+    return GroupedDimension(*dimensions)
