@@ -19,4 +19,3 @@ C, H, W = dim("C"), dim("H"), dim("W")
 
 C3HW = C * 3 | H | W
 C3HW
-# %%
