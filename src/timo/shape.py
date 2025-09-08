@@ -35,7 +35,6 @@ class Shape:
         return TransformNode(transform, root)
 
     def resize(self, new_size: Size):
-        from timo.size import Size
 
         new_sizes = []
         found = False
