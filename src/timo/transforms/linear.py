@@ -16,7 +16,7 @@ class Linear(Transform):
         self.on = dim(on)
         self.to = to
 
-    def name(self, output_shape, input_shape):
+    def name(self, input_shape, output_shape):
         return f"Linear({output_shape - input_shape})"
 
     def output_shape(self, input_shape):
