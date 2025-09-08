@@ -47,16 +47,9 @@ class Size:
         raise ValueError()
 
     def __or__(self, value: SingleDimension | Size | Shape):
-        from timo.shape import Shape
-        from timo.dimension import SingleDimension
+        from timo.shape import shape
 
-        if isinstance(value, SingleDimension):
-            return Shape(self, size(value, None))
-        if isinstance(value, Size):
-            return Shape(self, value)
-        if isinstance(value, Shape):
-            return Shape(self, *value.sizes)
-        raise ValueError()
+        return shape(self, value)
 
     def _single_sizes(self) -> Iterable[SingleSize]:
         raise NotImplementedError()

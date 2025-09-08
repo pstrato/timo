@@ -1,4 +1,9 @@
 from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from timo.size import Size
+    from timo.shape import Shape
 
 
 class Dimension:
@@ -55,6 +60,11 @@ class SingleDimension(Dimension):
 
     def _single_dimensions(self):
         yield self
+
+    def __or__(self, value: SingleDimension | Size | Shape):
+        from timo.shape import shape
+
+        return shape(self, value)
 
 
 def dim(name_or_dim: str | Dimension):

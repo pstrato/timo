@@ -18,16 +18,7 @@ class Shape:
         return self._sizes
 
     def __or__(self, value: SingleDimension | Size | Shape):
-        from timo.dimension import SingleDimension
-        from timo.size import size
-
-        if isinstance(value, SingleDimension):
-            return Shape(*self.sizes, size(value, None))
-        if isinstance(value, Size):
-            return Shape(*self.sizes, value)
-        if isinstance(value, Shape):
-            return Shape(*self.sizes, *value.sizes)
-        raise ValueError()
+        return shape(self, value)
 
     def __sub__(self, value: Shape):
         unique_sizes = []
@@ -87,5 +78,18 @@ class Shape:
         return str(self)
 
 
-def shape(*sizes: Size):
+def shape(*values: SingleDimension | Size | Shape):
+    from timo.dimension import SingleDimension
+    from timo.size import Size, SingleSize
+
+    sizes = []
+    for value in values:
+        if isinstance(value, SingleDimension):
+            sizes.append(SingleSize(value, None))
+        elif isinstance(value, Size):
+            sizes.append(value)
+        elif isinstance(value, Shape):
+            sizes.extend(value.sizes)
+        else:
+            raise ValueError()
     return Shape(*sizes)
