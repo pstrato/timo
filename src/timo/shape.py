@@ -28,10 +28,10 @@ class Shape:
         return Shape(*unique_sizes)
 
     def __rshift__(self, transform: Transform):
-        from timo.node import Node
+        from timo.node import InputNode
         from timo.transform import TransformNode
 
-        root = Node(self, str(self), None)
+        root = InputNode(str(self), self)
         return TransformNode(transform, root)
 
     def resize(self, new_size: Size):

@@ -1,25 +1,28 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
-from timo.split import SplitOp, SplitNode
+if TYPE_CHECKING:
+    pass
 
 
-class RepeatOp(SplitOp):
+from timo.transform import Transform
+
+
+class Repeat(Transform):
     def __init__(self, to: int):
         super().__init__()
         self.to = to
 
-    def name(self, input_shape, *output_shapes):
-        return f"Repeat({input_shape})"
+    def validate(self, inputs):
+        from timo.node import UnaryNode
 
-    def output_shapes(self, input_shape):
-        return [input_shape for _ in range(self.to)]
+        assert len(inputs) == 1
+        assert isinstance(inputs[0], UnaryNode)
 
+    def name(self, inputs, output_shapes):
+        input_shape = inputs[0].shapes[0]
+        return f"Repeat({input_shape}, {self.to})"
 
-class Repeat(SplitNode):
-    def __init__(self, parent, to: int):
-        super().__init__(RepeatOp(to), parent)
-
-    def __iter__(self):
-        for _ in range(self.split.to):
-            yield self.parent
+    def output_shapes(self, inputs):
+        input_shape = inputs[0].shapes[0]
+        return (input_shape,) * self.to

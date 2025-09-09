@@ -14,18 +14,21 @@ from timo.model import model
 o1 = i >> Linear(on=C, to=2) >> Linear(on=C, to=1)
 o2 = i >> Linear(on=C, to=4) >> Linear(on=C, to=1)
 
-o3 = Concat(o1, o2, on=C) >> Linear(on=C, to=4)
-o4, o5 = Repeat(o3, 2)
+o3 = Concat(C, o1, o2) >> Linear(on=C, to=4)
+o4, o5 = o3 >> Repeat(2)
 
 
 B, C, H, W = dim("B"), dim("C"), dim("H"), dim("W")
 
 
 @model()
-def autoencoder(input=B | C * 3 | H | W):
-    o = input >> Linear(on=C, to=64)
+def autoencoder(depth: int, input=B | C * 3 | H | W):
+    o = input
+    for _ in range(depth):
+        o = o >> Linear(on=C, to=64)
     return o
 
 
-print(autoencoder.inputs["input"])
-print(autoencoder.outputs[0])
+print(autoencoder(3).arguments["depth"])
+print(autoencoder(3).inputs["input"])
+print(autoencoder(3).outputs[0])

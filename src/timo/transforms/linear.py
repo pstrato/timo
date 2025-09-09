@@ -16,12 +16,21 @@ class Linear(Transform):
         self.on = dim(on)
         self.to = to
 
-    def name(self, input_shape, output_shape):
+    def validate(self, inputs):
+        from timo.node import UnaryNode
+
+        assert len(inputs) == 1
+        assert isinstance(inputs[0], UnaryNode)
+
+    def name(self, inputs, output_shapes):
+        input_shape = inputs[0].shapes[0]
+        output_shape = output_shapes[0]
         return f"Linear({output_shape - input_shape})"
 
-    def output_shape(self, input_shape):
+    def output_shapes(self, inputs):
         from timo.size import size
 
+        input_shape = inputs[0].shapes[0]
         if self.to is None:
             return input_shape
         return input_shape.resize(size(self.on, self.to))
