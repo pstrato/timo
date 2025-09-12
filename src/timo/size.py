@@ -13,15 +13,22 @@ class Size:
         raise NotImplementedError()
 
     @property
-    def size(self) -> int | None:
+    def count(self) -> int | None:
         raise NotImplementedError()
 
     @property
+    def set_count(self):
+        count = self.count
+        if count is None:
+            raise ValueError()
+        return count
+
+    @property
     def is_set(self):
-        return self.size is not None
+        return self.count is not None
 
     def __str__(self):
-        return f"{self.dimension}{self.size or '*'}"
+        return f"{self.dimension}{self.count or '*'}"
 
     def __repr__(self):
         return str(self)
@@ -29,13 +36,13 @@ class Size:
     def __eq__(self, value):
         if not isinstance(value, Size):
             return False
-        return self.dimension == value.dimension and self.size == value.size
+        return self.dimension == value.dimension and self.count == value.count
 
     def __ne__(self, value):
         if not isinstance(value, Size):
             return True
 
-        return self.dimension != value.dimension or self.size != value.size
+        return self.dimension != value.dimension or self.count != value.count
 
     def __add__(self, value: SingleDimension | Size):
         from timo.dimension import SingleDimension
@@ -56,64 +63,58 @@ class Size:
 
 
 class SingleSize(Size):
-    __slots__ = ["_dimension", "_size"]
+    __slots__ = ["_dimension", "_count"]
 
-    def __init__(self, dimension: SingleDimension, size: int):
+    def __init__(self, dimension: SingleDimension, count: int):
         from timo.dimension import SingleDimension
 
         assert isinstance(dimension, SingleDimension)
-        assert size is None or isinstance(size, int)
+        assert count is None or isinstance(count, int)
 
         self._dimension = dimension
-        self._size = size
+        self._count = count
 
     @property
     def dimension(self):
         return self._dimension
 
     @property
-    def size(self):
-        return self._size
+    def count(self):
+        return self._count
 
     def _single_sizes(self):
         yield self
 
 
-def size(dimension: Dimension | str, size: int | None):
+def size(dimension: Dimension | str, count: int | None):
     from timo.dimension import dim
 
-    return SingleSize(dim(dimension), size)
+    return SingleSize(dim(dimension), count)
 
 
 class GroupedSize(Size):
-    __slots__ = ["_dimension", "_size", "_sizes"]
+    __slots__ = ["_dimension", "_count", "_sizes"]
 
-    def __init__(self, *sizes: SingleSize):
-        from timo.dimension import GroupedDimension
+    def __init__(self, *sizes: Size):
+        from timo.dimension import group_dim
 
         assert len(sizes) > 0
-        for s in sizes:
-            assert isinstance(s, SingleSize)
-
         self._sizes = sizes
-        self._size = 1
+        self._count = 1
         for s in sizes:
-            if s.size == None:
-                self._size = None
+            if s.count == None:
+                self._count = None
                 break
-            self._size *= s.size
-        dimensions = []
-        for s in sizes:
-            dimensions.append(s.dimension)
-        self._dimension = GroupedDimension(*dimensions)
+            self._count *= s.count
+        self._dimension = group_dim(*map(lambda s: s.dimension, sizes))
 
     @property
     def dimension(self):
         return self._dimension
 
     @property
-    def size(self):
-        return self._size
+    def count(self):
+        return self._count
 
     @property
     def sizes(self):
@@ -123,8 +124,5 @@ class GroupedSize(Size):
         return self._sizes
 
 
-def sizes(**dims_sizes):
-    sizes = []
-    for dim, dim_size in dims_sizes.items():
-        sizes.append(size(dim, dim_size))
-    return GroupedSize(*sizes)
+def group_size(**values):
+    return GroupedSize(*map(size, values.items()))

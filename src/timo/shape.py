@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from timo.dimension import Dimension, SingleDimension
     from timo.size import Size
-    from timo.transform import Transform
 
 
 class Shape:
@@ -21,18 +20,11 @@ class Shape:
         return shape(self, value)
 
     def __sub__(self, value: Shape):
-        unique_sizes = []
+        kept = []
         for size in self.sizes:
             if size not in value.sizes:
-                unique_sizes.append(size)
-        return Shape(*unique_sizes)
-
-    def __rshift__(self, transform: Transform):
-        from timo.node import InputNode
-        from timo.transform import TransformNode
-
-        root = InputNode(str(self), self)
-        return TransformNode(transform, root)
+                kept.append(size)
+        return Shape(*kept)
 
     def resize(self, new_size: Size):
 
@@ -46,6 +38,21 @@ class Shape:
                 new_sizes.append(size)
         assert found
         return Shape(*new_sizes)
+
+    def indexof(self, dimension: str | Dimension):
+        from timo.dimension import dim
+
+        dimension = dim(dimension)
+        for i, size in enumerate(self._sizes):
+            if size.dimension == dimension:
+                return i
+        raise ValueError()
+
+    def before(self, dimension: str | Dimension):
+        return self._sizes[: self.indexof(dimension)]
+
+    def after(self, dimension: str | Dimension):
+        return self._sizes[self.indexof(dimension) + 1 :]
 
     def __eq__(self, value):
         if not isinstance(value, Shape):

@@ -50,13 +50,10 @@ class SingleDimension(Dimension):
     def __mul__(self, value: int | None):
         return self.size(value)
 
-    def size(self, size: int | None):
-        from timo.size import SingleSize
+    def size(self, value: int | None):
+        from timo.size import size
 
-        if size is not None and not isinstance(size, int):
-            raise ValueError()
-
-        return SingleSize(self, size)
+        return size(self, value)
 
     def _single_dimensions(self):
         yield self
@@ -67,13 +64,13 @@ class SingleDimension(Dimension):
         return shape(self, value)
 
 
-def dim(name_or_dim: str | Dimension):
+def dim(value: str | Dimension):
     from timo.dimension import Dimension
 
-    if isinstance(name_or_dim, Dimension):
-        return name_or_dim
-    if isinstance(name_or_dim, str):
-        return SingleDimension(name_or_dim)
+    if isinstance(value, Dimension):
+        return value
+    if isinstance(value, str):
+        return SingleDimension(value)
     raise ValueError()
 
 
@@ -101,8 +98,5 @@ class GroupedDimension(Dimension):
         return self._dimensions
 
 
-def group(*names_or_dims: str | Dimension):
-    dimensions = []
-    for name_or_dim in names_or_dims:
-        dimensions.append(dim(name_or_dim))
-    return GroupedDimension(*dimensions)
+def group_dim(*values: str | Dimension):
+    return GroupedDimension(*map(dim, values))
