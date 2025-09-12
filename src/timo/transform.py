@@ -3,56 +3,32 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from timo.shape import Shape
+    from timo.shapes import Shapes
 
-from timo.node import Node
-
-
-class Transform:
-    def validate(self, inputs: tuple[Node]):
-        raise NotImplementedError()
-
-    def name(self, inputs: tuple[Node], output_shapes: tuple[Shape]):
-        raise NotImplementedError()
-
-    def output_shapes(self, inputs: tuple[Node]) -> Shape | tuple[Shape]:
-        raise NotImplementedError()
+from flax.nnx import Module
 
 
-class TransformNode(Node):
-    __slots__ = ["_name", "_inputs", "_shapes", "_outputs", "_transform"]
-
-    def __init__(self, transform: Transform, *inputs: Node):
-        from timo.shape import Shape
-        from timo.node import OutputNode
-
-        super().__init__()
-        transform.validate(inputs)
-        self._transform = transform
-        self._inputs = inputs
-        self._shapes = transform.output_shapes(inputs)
-        if isinstance(self._shapes, Shape):
-            self._shapes = (self._shapes,)
-        self._name = transform.name(inputs, self._shapes)
-        self._outputs = tuple(
-            OutputNode(f"[{i}]" if len(self._shapes) > 1 else None, self, shape) for i, shape in enumerate(self._shapes)
-        )
+class Transform(Module):
+    def __init__(self):
+        self._input_shapes: Shapes | None = None
+        self._output_shapes: Shapes | None = None
 
     @property
-    def transform(self):
-        return self._transform
+    def input_shapes(self):
+        if self._input_shapes is None:
+            raise ValueError("Transform shape not set")
+        return self._input_shapes
 
     @property
-    def name(self):
-        return self._name
+    def output_shapes(self):
+        if self._output_shapes is None:
+            raise ValueError("Transform shape not set")
+        return self._output_shapes
 
-    @property
-    def inputs(self):
-        return self._inputs
+    def _set_shapes(self, input_shapes: Shapes | Shape, output_shapes: Shapes | Shape):
+        from timo.shapes import shapes
 
-    @property
-    def shapes(self):
-        return self._shapes
-
-    @property
-    def outputs(self):
-        return self._outputs
+        if self._input_shapes is not None or self._output_shapes is not None:
+            raise ValueError("Transform shape already set")
+        self._input_shapes = shapes(input_shapes)
+        self._output_shapes = shapes(output_shapes)
