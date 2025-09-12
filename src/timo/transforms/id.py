@@ -1,12 +1,14 @@
 from timo.transform import Transform
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from timo.transform_context import TransformContext
 
 
 class Id(Transform):
-    def validate(self, inputs):
-        assert len(inputs) == 1
+    def __init__(self, ctx: TransformContext):
+        super().__init__()
+        self._set_shapes(ctx.input_shapes, ctx.input_shapes)
 
-    def name(self, inputs, output_shapes):
-        return "Id"
-
-    def output_shapes(self, inputs):
-        return inputs[0].shapes
+    def __call__(self, inputs):
+        return inputs
