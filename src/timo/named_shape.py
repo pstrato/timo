@@ -101,13 +101,15 @@ class NamedShape:
         return str(self)
 
 
-def shape(*values: NamedAxis | SizedNamedAxis | NamedShape):
+def shape(*values: tuple[str | NamedAxis, int | None] | NamedAxis | str | SizedNamedAxis | NamedShape):
     from timo.named_axis import NamedAxis
     from timo.sized_named_axis import SizedNamedAxis
 
     sizes = []
     for value in values:
-        if isinstance(value, NamedAxis):
+        if isinstance(value, tuple):
+            sizes.append(SizedNamedAxis(value[0], value[1]))
+        elif isinstance(value, NamedAxis) or isinstance(value, str):
             sizes.append(SizedNamedAxis(value, None))
         elif isinstance(value, SizedNamedAxis):
             sizes.append(value)
