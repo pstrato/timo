@@ -1,21 +1,17 @@
 # %%
-from timo import dim
+from timo import name, size, shape
 
-N, M = dim("N"), dim("M")
+N, M = name("N"), name("M")
 
-NM = N + "M"
-assert NM == N + M
+N64 = size(N, 64)
 
-N64 = N * 64
-
-N64M32 = N * 64 + M * 32
-assert N64M32.count == 64 * 32
-
-s = N * 64 | M * 32
+s = shape(size(N, 64), size(M, 32))
 s
 
 # %%
-C, H, W = dim("C"), dim("H"), dim("W")
+C, H, W = name("C"), name("H"), name("W")
 
-C3HW = C * 3 | H | W
+C3HW = shape(size(C, 3), size(H), size(W))
 C3HW
+# %%
+C3HW.moveaxis(C, -2)

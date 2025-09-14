@@ -3,13 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from timo.shape import Shape
+    from timo.named_shape import NamedShape
 
 
-class Shapes:
+class ShapeSequence:
     __slots__ = ["_shapes"]
 
-    def __init__(self, *shapes: Shape):
+    def __init__(self, *shapes: NamedShape):
         assert len(shapes) > 0
         self._shapes = shapes
 
@@ -33,16 +33,16 @@ class Shapes:
         return self._shapes[0]
 
 
-def shapes(*shapes: Shape):
-    from timo.shape import Shape, shape
+def shapes(*shapes: NamedShape):
+    from timo.named_shape import NamedShape, shape
 
     all_shapes = []
     for s in shapes:
-        if isinstance(s, Shapes):
+        if isinstance(s, ShapeSequence):
             all_shapes.extend(s.shapes)
-        elif isinstance(s, Shape):
+        elif isinstance(s, NamedShape):
             all_shapes.append(s)
         else:
             all_shapes.append(shape(s))
 
-    return Shapes(*all_shapes)
+    return ShapeSequence(*all_shapes)

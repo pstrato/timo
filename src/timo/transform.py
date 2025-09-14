@@ -2,16 +2,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from timo.shape import Shape
-    from timo.shapes import Shapes
+    from timo.named_shape import NamedShape
+    from timo.shape_sequence import ShapeSequence
 
 from flax.nnx import Module
 
 
 class Transform(Module):
     def __init__(self):
-        self._input_shapes: Shapes | None = None
-        self._output_shapes: Shapes | None = None
+        self._input_shapes: ShapeSequence | None = None
+        self._output_shapes: ShapeSequence | None = None
 
     @property
     def input_shapes(self):
@@ -25,8 +25,8 @@ class Transform(Module):
             raise ValueError("Transform shape not set")
         return self._output_shapes
 
-    def _set_shapes(self, input_shapes: Shapes | Shape, output_shapes: Shapes | Shape):
-        from timo.shapes import shapes
+    def _set_shapes(self, input_shapes: ShapeSequence | NamedShape, output_shapes: ShapeSequence | NamedShape):
+        from timo.shape_sequence import shapes
 
         if self._input_shapes is not None or self._output_shapes is not None:
             raise ValueError("Transform shape already set")
