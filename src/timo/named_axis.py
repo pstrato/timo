@@ -5,11 +5,15 @@ class NamedAxis:
         self._name = name
 
     def __eq__(self, value):
+        if isinstance(value, str):
+            return self._name == value
         if not isinstance(value, NamedAxis):
             return False
         return self._name == value._name
 
     def __ne__(self, value):
+        if isinstance(value, str):
+            return self._name != value
         if not isinstance(value, NamedAxis):
             return True
         return self._name != value._name
@@ -33,4 +37,4 @@ def name(value: str | NamedAxis):
         return value
     if isinstance(value, str):
         return NamedAxis(value)
-    raise ValueError()
+    raise ValueError(f"Expected str or NamedAxis, got `{type(value)}`")

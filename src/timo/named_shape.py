@@ -24,7 +24,6 @@ class NamedShape:
         source: int | tuple[int, ...] | str | NamedAxis | tuple[str, ...] | tuple[NamedAxis, ...],
         destination: int | tuple[int, ...],
     ):
-        from numpy import moveaxis
         from timo.named_axis import NamedAxis
 
         if isinstance(source, tuple):
@@ -41,12 +40,12 @@ class NamedShape:
         if isinstance(source, tuple):
             for s, d in zip(source, destination):
                 if d < 0:
-                    d = len(moved_sizes) + d
+                    d = len(moved_sizes) + d + 1
 
                 moved_sizes.insert(d + 1, moved_sizes.pop(s))
         else:
             if destination < 0:
-                destination = len(moved_sizes) + destination
+                destination = len(moved_sizes) + destination + 1
             moved_sizes.insert(destination, moved_sizes.pop(source))
         return NamedShape(*moved_sizes)
 
@@ -75,13 +74,13 @@ class NamedShape:
         if not isinstance(value, NamedShape):
             return False
 
+        if len(self._sizes) != len(value._sizes):
+            return False
+
         return (self._sizes == value._sizes).all()
 
     def __ne__(self, value):
-        if not isinstance(value, NamedShape):
-            return True
-
-        return (self._sizes != value._sizes).any()
+        return not self.__eq__(value)
 
     def __getitem__(self, index: int | str | NamedAxis):
         from timo.named_axis import name
@@ -107,8 +106,13 @@ def shape(*values: tuple[str | NamedAxis, int | None] | NamedAxis | str | SizedN
 
     sizes = []
     for value in values:
-        if isinstance(value, tuple):
-            sizes.append(SizedNamedAxis(value[0], value[1]))
+        if isinstance(value, str):
+            sizes.append(SizedNamedAxis(value, None))
+        elif isinstance(value, tuple):
+            if len(value) == 2:
+                sizes.append(SizedNamedAxis(value[0], value[1]))
+            elif len(value) == 1:
+                sizes.append(SizedNamedAxis(value[0], None))
         elif isinstance(value, NamedAxis) or isinstance(value, str):
             sizes.append(SizedNamedAxis(value, None))
         elif isinstance(value, SizedNamedAxis):

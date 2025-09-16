@@ -40,15 +40,16 @@ class SizedNamedAxis:
         return str(self)
 
     def __eq__(self, value):
+        if isinstance(value, tuple):
+            if len(value) != 2:
+                return False
+            return self._axis == value[0] and self._size == value[1]
         if not isinstance(value, SizedNamedAxis):
             return False
         return self._axis == value._axis and self._size == value._size
 
     def __ne__(self, value):
-        if not isinstance(value, SizedNamedAxis):
-            return True
-
-        return self._axis != value._axis or self._size != value._size
+        return not self.__eq__(value)
 
 
 def size(axis: NamedAxis | str, size: int | None = None):
