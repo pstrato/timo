@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from timo.shape_sequence import ShapeSequence
+    from timo.named_shape_sequence import NamedShapeSequence
     from timo.transform import Transform
     from flax.nnx.rnglib import Rngs
     from flax.typing import Initializer
@@ -27,15 +27,15 @@ class TransformContext:
         return arg
 
     @property
-    def input_shapes(self) -> ShapeSequence:
+    def input_shapes(self) -> NamedShapeSequence:
         return self.get("input_shapes")
 
     @property
     def rngs(self) -> Rngs:
         return self.get("rngs")
 
-    def initializer(self, kind, default=_unset) -> Initializer:
-        return self.get(("initializer", kind), default)
+    def initializer(self, transform: Transform, kind, default=_unset) -> Initializer:
+        return self.get(("initializer", type(transform), kind), default)
 
     def __call__(self, transform: Transform):
         return TransformContext(self, input_shapes=transform.output_shapes)
