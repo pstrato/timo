@@ -1,0 +1,2 @@
+class Out:
+    pass
