@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from timo.named_shape import NamedShape
 
 
-class ShapeSequence:
+class NamedShapeSequence:
     __slots__ = ["_shapes"]
 
     def __init__(self, *shapes: NamedShape):
@@ -24,7 +24,7 @@ class ShapeSequence:
         return self._shapes
 
     @property
-    def __getitem__(self, index: int):
+    def __getitem__(self, index: int) -> NamedShape:
         return self._shapes[index]
 
     def single_shape(self):
@@ -38,11 +38,11 @@ def shapes(*shapes: NamedShape):
 
     all_shapes = []
     for s in shapes:
-        if isinstance(s, ShapeSequence):
+        if isinstance(s, NamedShapeSequence):
             all_shapes.extend(s.shapes)
         elif isinstance(s, NamedShape):
             all_shapes.append(s)
         else:
             all_shapes.append(shape(s))
 
-    return ShapeSequence(*all_shapes)
+    return NamedShapeSequence(*all_shapes)
