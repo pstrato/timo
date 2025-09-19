@@ -22,7 +22,7 @@ class NamedShape:
     def moveaxis(
         self,
         source: int | tuple[int, ...] | str | NamedAxis | tuple[str, ...] | tuple[NamedAxis, ...],
-        destination: int | tuple[int, ...],
+        destination: int | tuple[int, ...] | Position | tuple[Position, ...],
     ):
         from timo.named_axis import NamedAxis
 
@@ -39,13 +39,17 @@ class NamedShape:
         moved_sizes = list(self._sizes)
         if isinstance(source, tuple):
             for s, d in zip(source, destination):
+                if isinstance(d, Position):
+                    d = d.position(self)
                 if d < 0:
                     d = len(moved_sizes) + d + 1
 
-                moved_sizes.insert(d + 1, moved_sizes.pop(s))
+                moved_sizes.insert(d, moved_sizes.pop(s))
         else:
+            if isinstance(destination, Position):
+                destination = destination.position(self)
             if destination < 0:
-                destination = len(moved_sizes) + destination + 1
+                destination = len(moved_sizes) + destination
             moved_sizes.insert(destination, moved_sizes.pop(source))
         return NamedShape(*moved_sizes)
 
@@ -82,7 +86,7 @@ class NamedShape:
     def __ne__(self, value):
         return not self.__eq__(value)
 
-    def __getitem__(self, index: int | str | NamedAxis):
+    def __getitem__(self, index: int | str | NamedAxis) -> SizedNamedAxis:
         from timo.named_axis import name
 
         if isinstance(index, int):
@@ -98,6 +102,31 @@ class NamedShape:
 
     def __repr__(self):
         return str(self)
+
+
+class Position:
+    def position(self, shape: NamedShape):
+        raise NotImplementedError()
+
+
+class After(Position):
+    def __init__(self, axis: str | NamedAxis):
+        from timo.named_axis import name
+
+        self._axis = name(axis)
+
+    def position(self, shape: NamedShape):
+        return shape.indexof(self._axis)
+
+
+class Before(Position):
+    def __init__(self, axis: str | NamedAxis):
+        from timo.named_axis import name
+
+        self._axis = name(axis)
+
+    def position(self, shape: NamedShape):
+        return shape.indexof(self._axis) - 1
 
 
 def shape(*values: tuple[str | NamedAxis, int | None] | NamedAxis | str | SizedNamedAxis | NamedShape):
