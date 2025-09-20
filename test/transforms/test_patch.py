@@ -8,7 +8,7 @@ def test_patch():
     from timo.transforms.patch import Patch, square
 
     i = shape("H", "W")
-    ctx = TransformContext(input_shapes=shapes(i), rngs=Rngs(2112))
+    ctx = TransformContext(input_shapes=shapes(i))
     p = Patch(ctx, on=("H", "W"), coordinates=square(1), stat=None)
 
     x = jnp.array([[1, 2], [3, 4]])
@@ -27,7 +27,7 @@ def test_patch_max():
     from timo.transforms.patch import Patch, square
 
     i = shape("H", "W")
-    ctx = TransformContext(input_shapes=shapes(i), rngs=Rngs(2112))
+    ctx = TransformContext(input_shapes=shapes(i))
     p = Patch(ctx, on=("H", "W"), coordinates=square(1), stat="max")
 
     x = jnp.array([[1, 2], [3, 4]])
@@ -41,7 +41,7 @@ def test_patch_mean():
     from timo.transforms.patch import Patch, square
 
     i = shape("H", "W")
-    ctx = TransformContext(input_shapes=shapes(i), rngs=Rngs(2112))
+    ctx = TransformContext(input_shapes=shapes(i))
     p = Patch(ctx, on=("H", "W"), coordinates=square(1), stat="mean")
 
     x = jnp.array([[1, 2], [3, 4]])
