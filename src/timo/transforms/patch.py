@@ -17,7 +17,7 @@ from jax import numpy as jnp
 from jax.lax import stop_gradient
 
 
-def square_patch(distance: int):
+def square(distance: int):
     if distance <= 0:
         raise ValueError()
 
@@ -59,39 +59,6 @@ def padding(on: tuple[NamedAxis, ...], coordinates: tuple[tuple[int, ...]]):
     return tuple(padding)
 
 
-def index(shape: tuple[int, ...], padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]):
-    if len(shape) == 2:
-        index = [[], []]
-        for i in range(shape[0]):
-            for j in range(shape[1]):
-                for coordinate in coordinates:
-                    index[0].append(padding[0] + i + coordinate[0])
-                    index[1].append(padding[1] + j + coordinate[1])
-        return jnp.array(index)
-    raise NotImplementedError()
-
-
-def count(shape: tuple[int, ...], padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]):
-    if len(shape) == 2:
-        count = []
-        for i in range(shape[0]):
-            j_count = []
-            for j in range(shape[1]):
-                patch_count = 0
-                for coordinate in coordinates:
-                    pi = i + coordinate[0]
-                    if pi < 0 or pi >= shape[0]:
-                        continue
-                    pj = j + coordinate[1]
-                    if pj < 0 or pj >= shape[1]:
-                        continue
-                    patch_count += 1
-                j_count.append(count)
-            count.append(j_count)
-        return jnp.array(count)
-    raise NotImplementedError()
-
-
 class Patch(Transform):
     def __init__(
         self,
@@ -114,39 +81,83 @@ class Patch(Transform):
 
         self.coordinates = coords
         self.padding = padding(on, self.coordinates)
-        self.function = self.vmap(patch, (None, None, None), *on)
+        if stat is None:
+            function = patch
+        elif stat == "max":
+            function = patch_max
+        elif stat == "min":
+            function = patch_min
+        elif stat == "mean":
+            function = patch_mean
+        else:
+            raise ValueError(f"Unsupported stat: `{stat}`")
+
+        self.function = self.vmap(function, (None, None), *on)
         self.stat = stat
 
     def transform(self, inputs, info: Info, out: Out):
-        return self.function(inputs, self.padding, self.stat, self.coordinates)
+        return self.function(inputs, self.padding, self.coordinates)
 
 
-def patch(inputs: Array, padding: tuple[int, ...], stat: str | None, coordinates: tuple[tuple[int]]):
-
-    if stat is not None:
-        if stat == "min":
-            pad_value = jnp.inf
-        elif stat == "max":
-            pad_value = -jnp.inf
-        elif stat == "mean":
-            pad_value = 0
-        else:
-            raise ValueError(f"Unknown stat: `{stat}`, expected `min`, `max`, or `mean`")
-
+def _patch(inputs: Array, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]], pad_value: float) -> Array:
     patch_index = stop_gradient(index(inputs.shape, padding, coordinates))
     patch_dim_size = len(coordinates)
     inputs_shape = inputs.shape
     inputs = jnp.pad(inputs, padding, mode="constant", constant_values=pad_value)
     outputs = inputs[*patch_index]
     outputs = jnp.reshape(outputs, (*inputs_shape, patch_dim_size))
-    if stat is not None:
-        if stat == "min":
-            return jnp.min(outputs, -1)
-        if stat == "max":
-            return jnp.max(outputs, -1)
-        if stat == "mean":
-            patch_count = stop_gradient(count(inputs.shape, padding, coordinates))
-            return jnp.sum(outputs, -1) / patch_count
-        else:
-            raise ValueError()
+    return outputs
+
+
+def patch(inputs: Array, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]) -> Array:
+    return _patch(inputs, padding, coordinates, 0)
+
+
+def patch_min(inputs: Array, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]) -> Array:
+    outputs = _patch(inputs, padding, coordinates, jnp.inf)
+    return jnp.min(outputs, -1)
+
+
+def patch_max(inputs: Array, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]) -> Array:
+    outputs = _patch(inputs, padding, coordinates, -jnp.inf)
+    return jnp.max(outputs, -1)
+
+
+def patch_mean(inputs: Array, padding: tuple[int, ...], coordinates: tuple[tuple[int]]) -> Array:
+    patch_count = count(inputs.shape, coordinates)
+    outputs = _patch(inputs, padding, coordinates, 0)
+    outputs = jnp.sum(outputs, -1)
     return outputs / patch_count
+
+
+def index(shape: tuple[int, ...], padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]):
+    if len(shape) == 2:
+        index = [[], []]
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                for coordinate in coordinates:
+                    index[0].append(padding[0] + i + coordinate[0])
+                    index[1].append(padding[1] + j + coordinate[1])
+        return jnp.array(index)
+    raise NotImplementedError()
+
+
+def count(shape: tuple[int, ...], coordinates: tuple[tuple[int, ...]]):
+    if len(shape) == 2:
+        count = []
+        for i in range(shape[0]):
+            j_count = []
+            for j in range(shape[1]):
+                patch_count = 0
+                for coordinate in coordinates:
+                    pi = i + coordinate[0]
+                    if pi < 0 or pi >= shape[0]:
+                        continue
+                    pj = j + coordinate[1]
+                    if pj < 0 or pj >= shape[1]:
+                        continue
+                    patch_count += 1
+                j_count.append(patch_count)
+            count.append(j_count)
+        return jnp.array(count)
+    raise NotImplementedError()
