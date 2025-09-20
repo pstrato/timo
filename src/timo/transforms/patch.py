@@ -21,10 +21,8 @@ def square(distance: int):
     if distance <= 0:
         raise ValueError()
 
-    def patch(on: tuple[NamedAxis, ...]):
+    def patch(on: tuple[NamedAxis, NamedAxis]):
         ndim = len(on)
-        if ndim == 1:
-            return ((-distance,), (+distance,))
         if ndim == 2:
             coordinates = []
             for x in range(-distance, distance + 1):
@@ -33,9 +31,9 @@ def square(distance: int):
             for y in range(-distance + 1, distance):
                 coordinates.append((-distance, y))
                 coordinates.append((+distance, y))
-            return tuple(coordinates)
+            return tuple(sorted(coordinates))
 
-        raise NotImplementedError()
+        raise ValueError(f"Square for dimension 2 only")
 
     return patch
 
