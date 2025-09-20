@@ -31,7 +31,7 @@ class Transform(Module):
             raise ValueError("Transform shape not set")
         return self._output_shapes
 
-    def __call__(self, *args, info: Info, out: Out):
+    def __call__(self, *args, info: Info | None = None, out: Out | None = None):
         return self.transform(*args, info=info, out=out)
 
     def transform(self, *args, info: Info, out: Out):

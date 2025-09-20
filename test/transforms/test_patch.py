@@ -12,7 +12,7 @@ def test_patch():
     p = Patch(ctx, on=("H", "W"), coordinates=square(1), stat=None)
 
     x = jnp.array([[1, 2], [3, 4]])
-    y = p(x, info=None, out=None)
+    y = p(x)
     assert y.shape == (2, 2, 8)
     assert jnp.allclose(
         y,
@@ -31,7 +31,7 @@ def test_patch_max():
     p = Patch(ctx, on=("H", "W"), coordinates=square(1), stat="max")
 
     x = jnp.array([[1, 2], [3, 4]])
-    y = p(x, info=None, out=None)
+    y = p(x)
     assert y.shape == (2, 2)
     assert jnp.allclose(y, jnp.array([[4, 4], [4, 3]]))
 
@@ -45,9 +45,8 @@ def test_patch_mean():
     p = Patch(ctx, on=("H", "W"), coordinates=square(1), stat="mean")
 
     x = jnp.array([[1, 2], [3, 4]])
-    y = p(x, info=None, out=None)
+    y = p(x)
     assert y.shape == (2, 2)
-    print(y)
     assert jnp.allclose(y, jnp.array([[9 / 3, 8 / 3], [7 / 3, 6 / 3]]))
 
 
