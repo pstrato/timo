@@ -53,6 +53,20 @@ class NamedShape:
             moved_sizes.insert(destination, moved_sizes.pop(source))
         return NamedShape(*moved_sizes)
 
+    def remove(self, axis: str | NamedAxis, raise_if_not_found: bool = True):
+        from timo.named_axis import name
+
+        axis = name(axis)
+        sizes = []
+        found = False
+        for size in self._sizes:
+            if size.axis == axis:
+                found = True
+            sizes.append(size)
+        if raise_if_not_found and not found:
+            raise ValueError("Axis not found")
+        return NamedShape(*sizes)
+
     def resize(self, new_size: SizedNamedAxis):
         index = self.indexof(new_size.axis)
         sizes = self._sizes.copy()
