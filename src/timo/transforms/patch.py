@@ -98,7 +98,7 @@ class Patch(Transform):
 
 
 def _patch(inputs: Array, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]], pad_value: float) -> Array:
-    patch_index = stop_gradient(index(inputs.shape, padding, coordinates))
+    patch_index = index(inputs.shape, padding, coordinates)
     patch_dim_size = len(coordinates)
     inputs_shape = inputs.shape
     inputs = jnp.pad(inputs, padding, mode="constant", constant_values=pad_value)
