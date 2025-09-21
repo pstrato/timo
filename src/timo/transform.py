@@ -16,8 +16,13 @@ class Transform(Module):
     def __init__(self, ctx: TransformContext, output_shapes: NamedShapeSequence | NamedShape):
         from timo.named_shape_sequence import shapes
 
+        self._ctx = ctx
         self._input_shapes = ctx.input_shapes
         self._output_shapes = shapes(output_shapes)
+
+    @property
+    def ctx(self):
+        return self._ctx
 
     @property
     def input_shapes(self):

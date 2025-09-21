@@ -11,14 +11,14 @@ from timo.transform import Transform
 
 
 class Sequential(Transform):
-    def __init__(self, ctx: TransformContext, *transforms: Transform):
+    def __init__(self, *transforms: Transform):
 
-        super().__init__(ctx, transforms[-1].output_shapes)
-        self.function = sequential
+        super().__init__(transforms[0].ctx, transforms[-1].output_shapes)
+        self._function = sequential
         self._transforms = transforms
 
     def transform(self, inputs, info: Info, out: Out):
-        return self.function(inputs, *self._transforms, info=info, out=out)
+        return self._function(inputs, *self._transforms, info=info, out=out)
 
 
 def sequential(inputs: Array, *transforms: Transform, info: Info, out: Out):
