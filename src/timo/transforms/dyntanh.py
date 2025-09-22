@@ -2,13 +2,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from jax import Array
     from timo.transform_context import TransformContext
     from timo.named_axis import NamedAxis
     from timo.info import Info
     from timo.out import Out
 
-from timo.transform import Transform
+from jax import Array
+from timo.transform_factory import TransformFactory
+from timo.transform_module import TransformModule
 from flax import nnx
 from jax import numpy as jnp
 
@@ -17,25 +18,24 @@ default_scale_init = nnx.nn.initializers.ones_init()
 default_bias_init = nnx.nn.initializers.zeros_init()
 
 
-def output_shapes(ctx: TransformContext):
-    return ctx.input_shapes
-
-
-class DynTanH(Transform):
+class DynTanh(TransformFactory):
     def __init__(self, ctx: TransformContext, on: str | NamedAxis, bias: bool = True):
-        super().__init__(ctx, output_shapes(ctx))
-        in_size = ctx.input_shapes.single_shape()[on].set_size
-        self.scale = self.params(ctx, "scale", in_size, default_scale_init)
-        if bias:
-            self.bias = self.params(ctx, "bias", in_size, default_bias_init)
+        super().__init__(ctx, ctx.input_shapes)
+        self.on = on
+        self.bias = bias
 
-        self.function = self.vmap(dyntanh, (None, None), on)
+    def module(self):
+        in_size = self.ctx.input_shapes.single_shape()[self.on].set_size
+        scale = self.params("scale", in_size, default_scale_init)
+        if self.bias:
+            bias = self.params("bias", in_size, default_bias_init)
+        else:
+            bias = None
+        transform = self.vmap(dyntanh, (None,) * 4, self.on)
+        return TransformModule[Array, Array](transform, scale=scale, bias=bias)
 
-    def transform(self, inputs: Array, info: Info, out: Out):
-        return self.function(inputs, self.scale, self.bias)
 
-
-def dyntanh(inputs: Array, scale: nnx.Param, bias: nnx.Param | None):
+def dyntanh(inputs: Array, info: Info, out: Out, scale: nnx.Param, bias: nnx.Param | None):
     outputs = inputs * scale
     if bias is None:
         return outputs

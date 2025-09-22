@@ -12,9 +12,9 @@ if TYPE_CHECKING:
     PatchCoordinates = Callable[[tuple[NamedAxis, ...]], tuple[tuple[int, ...]]]
 
 from functools import cache
-from timo.transform import Transform
+from timo.transform_factory import TransformFactory
+from timo.transform_module import TransformModule
 from jax import numpy as jnp
-from jax.lax import stop_gradient
 
 
 def square(distance: int):
@@ -57,7 +57,7 @@ def padding(on: tuple[NamedAxis, ...], coordinates: tuple[tuple[int, ...]]):
     return tuple(padding)
 
 
-class Patch(Transform):
+class Patch(TransformFactory):
     def __init__(
         self,
         ctx: TransformContext,
@@ -78,23 +78,24 @@ class Patch(Transform):
         super().__init__(ctx, output_shape)
 
         self.coordinates = coords
-        self.padding = padding(on, self.coordinates)
-        if stat is None:
-            function = patch
-        elif stat == "max":
-            function = patch_max
-        elif stat == "min":
-            function = patch_min
-        elif stat == "mean":
-            function = patch_mean
-        else:
-            raise ValueError(f"Unsupported stat: `{stat}`")
-
-        self.function = self.vmap(function, (None, None), *on)
+        self.on = on
         self.stat = stat
 
-    def transform(self, inputs, info: Info, out: Out):
-        return self.function(inputs, self.padding, self.coordinates)
+    def module(self):
+        p = padding(self.on, self.coordinates)
+        if self.stat is None:
+            transform = patch
+        elif self.stat == "max":
+            transform = patch_max
+        elif self.stat == "min":
+            transform = patch_min
+        elif self.stat == "mean":
+            transform = patch_mean
+        else:
+            raise ValueError(f"Unsupported stat: `{self.stat}`")
+
+        transform = self.vmap(transform, (None,) * 4, *self.on)
+        return TransformModule(transform, padding=p, coordinates=self.coordinates)
 
 
 def _patch(inputs: Array, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]], pad_value: float) -> Array:
@@ -107,21 +108,25 @@ def _patch(inputs: Array, padding: tuple[int, ...], coordinates: tuple[tuple[int
     return outputs
 
 
-def patch(inputs: Array, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]) -> Array:
+def patch(inputs: Array, info: Info, out: Out, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]) -> Array:
     return _patch(inputs, padding, coordinates, 0)
 
 
-def patch_min(inputs: Array, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]) -> Array:
+def patch_min(
+    inputs: Array, info: Info, out: Out, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]
+) -> Array:
     outputs = _patch(inputs, padding, coordinates, jnp.inf)
     return jnp.min(outputs, -1)
 
 
-def patch_max(inputs: Array, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]) -> Array:
+def patch_max(
+    inputs: Array, info: Info, out: Out, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]
+) -> Array:
     outputs = _patch(inputs, padding, coordinates, -jnp.inf)
     return jnp.max(outputs, -1)
 
 
-def patch_mean(inputs: Array, padding: tuple[int, ...], coordinates: tuple[tuple[int]]) -> Array:
+def patch_mean(inputs: Array, info: Info, out: Out, padding: tuple[int, ...], coordinates: tuple[tuple[int]]) -> Array:
     patch_count = count(inputs.shape, coordinates)
     outputs = _patch(inputs, padding, coordinates, 0)
     outputs = jnp.sum(outputs, -1)

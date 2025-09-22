@@ -5,20 +5,27 @@ if TYPE_CHECKING:
     from timo.named_axis import NamedAxis
     from timo.named_shape import NamedShape
     from timo.named_shape_sequence import NamedShapeSequence
-    from timo.info import Info
-    from timo.out import Out
-    from timo.transform_context import TransformContext
 
-from flax.nnx import Module, Param, vmap, Initializer
+from timo.transform_module import TransformModule
+from timo.transform_context import TransformContext
+
+from flax.nnx import Param, vmap, Initializer
 
 
-class Transform(Module):
+class TransformFactory(TransformContext):
     def __init__(self, ctx: TransformContext, output_shapes: NamedShapeSequence | NamedShape):
         from timo.named_shape_sequence import shapes
 
         self._ctx = ctx
         self._input_shapes = ctx.input_shapes
         self._output_shapes = shapes(output_shapes)
+
+    def get(self, name, default=...):
+        if name == "input_shapes":
+            return self._input_shapes
+        if name == "output_shapes":
+            return self._output_shapes
+        return self._ctx.get(name, default)
 
     @property
     def ctx(self):
@@ -36,14 +43,11 @@ class Transform(Module):
             raise ValueError("Transform shape not set")
         return self._output_shapes
 
-    def __call__(self, *args, info: Info | None = None, out: Out | None = None):
-        return self.transform(*args, info=info, out=out)
-
-    def transform(self, *args, info: Info, out: Out):
+    def module(self) -> TransformModule:
         raise NotImplementedError()
 
-    def params(self, ctx: TransformContext, kind: str, shape: int | tuple[int, ...], default_init: Initializer):
-        return Param(ctx.initializer(self, kind, default_init)(ctx.rngs.params(), shape))
+    def params(self, kind: str, shape: int | tuple[int, ...], default_init: Initializer):
+        return Param(self.initializer(self, kind, default_init)(self.rngs.params(), shape))
 
     def in_size(self, on: str | NamedAxis):
         return self.input_shapes.single_shape()[on].set_size

@@ -1,5 +1,4 @@
 from __future__ import annotations
-from timo.transform import Transform
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -7,12 +6,19 @@ if TYPE_CHECKING:
     from timo.info import Info
     from timo.out import Out
 
+from jax import Array
+from timo.transform_factory import TransformFactory
+from timo.transform_module import TransformModule
 from jax.lax import stop_gradient
 
 
-class StopGradient(Transform):
+class StopGradient(TransformFactory):
     def __init__(self, ctx: TransformContext):
         super().__init__(ctx, ctx.input_shapes)
 
-    def transform(self, inputs, info: Info, out: Out):
-        return stop_gradient(inputs)
+    def module(self):
+        return TransformModule[Array, Array](transform)
+
+
+def transform(input: Array, info: Info, out: Out):
+    return stop_gradient(input)

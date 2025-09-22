@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from timo.named_shape_sequence import NamedShapeSequence
-    from timo.transform import Transform
+    from timo.transform_factory import TransformFactory
     from flax.nnx.rnglib import Rngs
     from flax.typing import Initializer
 
@@ -34,8 +34,8 @@ class TransformContext:
     def rngs(self) -> Rngs:
         return self.get("rngs")
 
-    def initializer(self, transform: Transform, kind, default=_unset) -> Initializer:
+    def initializer(self, transform: TransformFactory, kind, default=_unset) -> Initializer:
         return self.get(("initializer", type(transform), kind), default)
 
-    def __call__(self, transform: Transform):
+    def __call__(self, transform: TransformFactory):
         return TransformContext(self, input_shapes=transform.output_shapes)

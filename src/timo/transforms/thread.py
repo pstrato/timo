@@ -3,16 +3,17 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from timo.named_axis import NamedAxis
-    from timo.transform_context import TransformContext
     from timo.info import Info
     from timo.out import Out
 
-from timo.transform import Transform
+from jax import Array
+from timo.transform_factory import TransformFactory
+from timo.transform_module import TransformModule
 from jax.lax import concatenate
 
 
-class Thread(Transform):
-    def __init__(self, *transforms: Transform, on: str | NamedAxis):
+class Thread(TransformFactory):
+    def __init__(self, *transforms: TransformFactory, on: str | NamedAxis):
         from timo.sized_named_axis import size
 
         if len(transforms) == 0:
@@ -33,16 +34,18 @@ class Thread(Transform):
             concat_size += other_output_shape[on].set_size
         output_shape = first_output_shape.resize(size(on, concat_size))
         super().__init__(first_transform.ctx, output_shape)
-        self.function = thread
-        self.transforms = transforms
-        self.axis = axis
+        self._transforms = transforms
+        self._axis = axis
 
-    def transform(self, *args, info, out):
-        return self.function(*args, info=info, out=out, transforms=self.transforms, axis=self.axis)
+    def module(self):
+        transforms = []
+        for transform in self._transforms:
+            transforms.append(transform.module())
+        return TransformModule[Array, Array](thread, transforms=transforms, axis=self._axis)
 
 
-def thread(*args, info: Info, out: Out, transforms: tuple[Transform, ...], axis: int):
+def thread(inputs: Array, info: Info, out: Out, transforms: tuple[TransformFactory, ...], axis: int):
     outputs = []
     for transform in transforms:
-        outputs.append(transform(*args, info=info, out=out))
+        outputs.append(transform(inputs, info=info, out=out))
     return concatenate(outputs, dimension=axis)

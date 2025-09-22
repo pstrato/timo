@@ -8,26 +8,25 @@ if TYPE_CHECKING:
     from timo.info import Info
     from timo.out import Out
 
-from timo.transform import Transform
+from timo.transform_factory import TransformFactory
+from timo.transform_module import TransformModule
+from jax import Array
 import jax
 from jax import numpy as jnp
 
 
-def output_shape(ctx: TransformContext, axis: str | NamedAxis, to: int | After | Before):
-    input_shape = ctx.input_shapes.single_shape()
-    return input_shape.moveaxis(axis, to)
-
-
-class MoveAxis(Transform):
+class MoveAxis(TransformFactory):
     def __init__(self, ctx: TransformContext, axis: str | NamedAxis, to: int | After | Before):
-        super().__init__(ctx, output_shape(ctx, axis, to))
-        self.function = moveaxis
-        self.source = self.input_shapes.single_shape().indexof(axis)
-        self.destination = self.output_shapes.single_shape().indexof(axis)
+        input_shape = ctx.input_shapes.single_shape()
+        super().__init__(ctx, input_shape.moveaxis(axis, to))
+        self.axis = axis
+        self.to = to
 
-    def transform(self, inputs, info: Info, out: Out):
-        return self.function(inputs, self.source, self.destination)
+    def module(self):
+        source = self.input_shapes.single_shape().indexof(self.axis)
+        destination = self.output_shapes.single_shape().indexof(self.axis)
+        return TransformModule[Array, Array](source=source, destination=destination)
 
 
-def moveaxis(inputs: jax.Array, source: int, destination: int):
+def moveaxis(inputs: Array, info: Info, out: Out, source: int, destination: int):
     return jnp.moveaxis(inputs, source, destination)
