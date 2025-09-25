@@ -4,3 +4,4 @@ from timo.named_shape import shape, NamedShape, Before, After
 from timo.named_shape_sequence import shapes, NamedShapeSequence
 from timo.transform_factory import TransformFactory
 from timo.transform_context import TransformContext
+from timo.transform_module import TransformModule
