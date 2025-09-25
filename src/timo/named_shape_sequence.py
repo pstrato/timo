@@ -19,6 +19,28 @@ class NamedShapeSequence:
     def __repr__(self):
         return str(self)
 
+    def __eq__(self, value):
+        from timo.named_shape import NamedShape
+
+        if isinstance(value, str):
+            return str(self) == value
+        if isinstance(value, tuple):
+            value = shapes(*value)
+        if isinstance(value, NamedShape):
+            value = shapes(value)
+
+        if not isinstance(value, NamedShapeSequence):
+            return False
+
+        if len(self._shapes) != len(value._shapes):
+            return False
+
+        for shape, other_shape in zip(self._shapes, value._shapes):
+            if shape != other_shape:
+                return False
+
+        return True
+
     @property
     def shapes(self):
         return self._shapes
