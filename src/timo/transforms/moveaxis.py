@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 from timo.transform_factory import TransformFactory
 from timo.transform_module import TransformModule
 from jax import Array
-import jax
 from jax import numpy as jnp
 
 
@@ -24,7 +23,7 @@ class MoveAxis(TransformFactory):
 
     def module(self):
         source = self.input_shapes.single_shape().indexof(self.axis)
-        destination = self.output_shapes.single_shape().indexof(self.axis)
+        destination = self.transform_output_shapes.single_shape().indexof(self.axis)
         return TransformModule[Array, Array](source=source, destination=destination)
 
 

@@ -19,14 +19,14 @@ class Thread(TransformFactory):
         if len(transforms) == 0:
             raise ValueError("Expected at least one transform")
         first_transform = transforms[0]
-        first_output_shape = first_transform.output_shapes.single_shape()
+        first_output_shape = first_transform.transform_output_shapes.single_shape()
         concat_shape = first_output_shape.remove(on)
         axis = first_output_shape.indexof(on)
         concat_size = first_output_shape[on].set_size
         for other_transform in transforms[1:]:
             if first_transform.input_shapes != other_transform.input_shapes:
                 raise ValueError("Incompatible input shapes")
-            other_output_shape = other_transform.output_shapes.single_shape()
+            other_output_shape = other_transform.transform_output_shapes.single_shape()
             if axis != other_output_shape.indexof(on):
                 raise ValueError("Incompatible output shape")
             if other_output_shape.remove(on) != concat_shape:

@@ -13,7 +13,7 @@ from timo.transform_module import TransformModule
 class Sequential(TransformFactory):
     def __init__(self, *transforms: TransformFactory):
 
-        super().__init__(transforms[0].ctx, transforms[-1].output_shapes)
+        super().__init__(transforms[0].ctx, transforms[-1].transform_output_shapes)
         self._transforms = transforms
 
     def module(self):
