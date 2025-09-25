@@ -6,7 +6,7 @@ class NamedAxis:
 
     def __eq__(self, value):
         if isinstance(value, str):
-            return self._name == value
+            return str(self) == value
         if not isinstance(value, NamedAxis):
             return False
         return self._name == value._name
