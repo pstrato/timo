@@ -89,6 +89,9 @@ class NamedShape:
         return self._sizes[max(map(self.indexof, axes)) + 1 :]
 
     def __eq__(self, value):
+        if isinstance(value, str):
+            return str(self) == value
+
         if not isinstance(value, NamedShape):
             return False
 
