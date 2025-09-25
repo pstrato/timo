@@ -36,6 +36,3 @@ class TransformContext:
 
     def initializer(self, transform: TransformFactory, kind, default=_unset) -> Initializer:
         return self.get(("initializer", type(transform), kind), default)
-
-    def __call__(self, transform: TransformFactory):
-        return TransformContext(self, input_shapes=transform.output_shapes)
