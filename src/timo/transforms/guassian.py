@@ -19,21 +19,25 @@ default_covar_init = nnx.nn.initializers.ones_init()
 
 
 class Gaussian(TransformFactory):
-    def __init__(self, ctx: TransformContext, on: str | NamedAxis, to: int | None = None):
+    def __init__(self, on: str | NamedAxis, to: int | None = None):
+        super().__init__()
+        self.on = on
+        self.to = to
+
+    def create_module(self, ctx: TransformContext):
         from timo.sized_named_axis import size
 
         input_shape = ctx.input_shapes.single_shape()
+        in_size = ctx.in_size(self.on)
+        to_size = self.to or in_size
+        output_shape = input_shape.resize(size(self.on, to_size))
 
-        super().__init__(ctx, input_shape.resize(size(on, to or input_shape[on].set_size)))
-        self.on = on
-
-    def module(self):
-        center = self.params("center", (self.in_size(self.on), self.to_size(self.on)), default_center_init)
-        covar = nnx.Param(jnp.stack([jnp.eye(self.in_size(self.on)) for _ in range(self.to_size(self.on))], axis=-1))
+        center = ctx.params("center", (in_size, to_size), default_center_init)
+        covar = nnx.Param(jnp.stack([jnp.eye(in_size) for _ in range(to_size)], axis=-1))
         transform = gaussian
         transform = nnx.vmap(transform, in_axes=(None, None, None, -1, -1), out_axes=-1)
         transform = self.vmap(transform, (None,) * 4, self.on)
-        return TransformModule[Array, Array](transform, center=center, covar=covar)
+        return output_shape, TransformModule[Array, Array](transform, center=center, covar=covar)
 
 
 def gaussian(inputs: Array, info: Info, out: Out, center: nnx.Param, covar: nnx.Param | None):

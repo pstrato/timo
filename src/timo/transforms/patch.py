@@ -60,29 +60,29 @@ def padding(on: tuple[NamedAxis, ...], coordinates: tuple[tuple[int, ...]]):
 class Patch(TransformFactory):
     def __init__(
         self,
-        ctx: TransformContext,
         on: tuple[str | NamedAxis, ...],
         coordinates: PatchCoordinates,
         axis: str | NamedAxis = "P",
         stat: str | None = None,
     ):
-        from timo.named_shape import shape
-
-        coords = coordinates(on)
-        if stat is None:
-            patch_dim_size = len(coords)
-            input_shape = ctx.input_shapes.single_shape()
-            output_shape = shape(input_shape, (axis, patch_dim_size))
-        else:
-            output_shape = ctx.input_shapes
-        super().__init__(ctx, output_shape)
-
-        self.coordinates = coords
+        super().__init__()
         self.on = on
+        self.coordinates = coordinates
+        self.axis = axis
         self.stat = stat
 
-    def module(self):
-        p = padding(self.on, self.coordinates)
+    def create_module(self, ctx: TransformContext):
+        from timo.named_shape import shape
+
+        coordinates = self.coordinates(self.on)
+        if self.stat is None:
+            patch_dim_size = len(coordinates)
+            input_shape = ctx.input_shapes.single_shape()
+            output_shape = shape(input_shape, (self.axis, patch_dim_size))
+        else:
+            output_shape = ctx.input_shapes
+
+        p = padding(self.on, coordinates)
         if self.stat is None:
             transform = patch
         elif self.stat == "max":
@@ -95,7 +95,7 @@ class Patch(TransformFactory):
             raise ValueError(f"Unsupported stat: `{self.stat}`")
 
         transform = self.vmap(transform, (None,) * 4, *self.on)
-        return TransformModule(transform, padding=p, coordinates=self.coordinates)
+        return output_shape, TransformModule(transform, padding=p, coordinates=coordinates)
 
 
 def _patch(inputs: Array, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]], pad_value: float) -> Array:

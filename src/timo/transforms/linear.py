@@ -18,23 +18,26 @@ default_bias_init = nnx.nn.initializers.zeros_init()
 
 
 class Linear(TransformFactory):
-    def __init__(self, ctx: TransformContext, on: str | NamedAxis, to: int | None = None, bias: bool = True):
-        from timo.sized_named_axis import size
-
-        input_shape = ctx.input_shapes.single_shape()
-
-        super().__init__(ctx, input_shape.resize(size(on, to or input_shape[on].set_size)))
+    def __init__(self, on: str | NamedAxis, to: int | None = None, bias: bool = True):
+        super().__init__()
         self.on = on
+        self.to = to
         self.bias = bias
 
-    def module(self):
-        kernel = self.params("kernel", (self.in_size(self.on), self.to_size(self.on)), default_kernel_init)
+    def create_module(self, ctx: TransformContext):
+        from timo.sized_named_axis import size
+
+        in_size = ctx.in_size(self.on)
+        to_size = self.to or in_size
+        output_shape = ctx.input_shapes.single_shape().resize(size(self.on, to_size))
+
+        kernel = ctx.params("kernel", (in_size, to_size), default_kernel_init)
         if self.bias:
-            bias = self.params("bias", self.to_size(self.on), default_bias_init)
+            bias = ctx.params("bias", to_size, default_bias_init)
         else:
             bias = None
         transform = self.vmap(linear, (None,) * 4, self.on)
-        return TransformModule[Array, Array](transform, kernel=kernel, bias=bias)
+        return output_shape, TransformModule[Array, Array](transform, kernel=kernel, bias=bias)
 
 
 def linear(inputs: Array, info: Info, out: Out, kernel: nnx.Param, bias: nnx.Param | None):

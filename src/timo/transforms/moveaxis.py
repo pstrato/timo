@@ -15,16 +15,18 @@ from jax import numpy as jnp
 
 
 class MoveAxis(TransformFactory):
-    def __init__(self, ctx: TransformContext, axis: str | NamedAxis, to: int | After | Before):
-        input_shape = ctx.input_shapes.single_shape()
-        super().__init__(ctx, input_shape.moveaxis(axis, to))
+    def __init__(self, axis: str | NamedAxis, to: int | After | Before):
+        super().__init__()
         self.axis = axis
         self.to = to
 
-    def module(self):
+    def create_module(self, ctx: TransformContext):
+        input_shape = ctx.input_shapes.single_shape()
+        output_shape = input_shape.moveaxis(self.axis, self.to)
+
         source = self.input_shapes.single_shape().indexof(self.axis)
-        destination = self.transform_output_shapes.single_shape().indexof(self.axis)
-        return TransformModule[Array, Array](source=source, destination=destination)
+        destination = self.output_shapes.single_shape().indexof(self.axis)
+        return output_shape, TransformModule[Array, Array](source=source, destination=destination)
 
 
 def moveaxis(inputs: Array, info: Info, out: Out, source: int, destination: int):

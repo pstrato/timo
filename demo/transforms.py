@@ -12,23 +12,23 @@ from timo.transforms.stop_gradient import StopGradient
 from timo.transforms.linear import Linear
 from timo.transforms.dyntanh import DynTanh
 from timo.transforms.patch import Patch, square, compbine_patches
-from timo.transforms.sequential import Sequential
 from timo.transforms.thread import Thread
 from timo.transforms.guassian import Gaussian
 
 from flax.nnx.rnglib import Rngs
 from flax import nnx
 
-ctx = TransformContext(input_shapes=shapes(i), rngs=Rngs(2112))
-ln1 = Linear(ctx, on=C, to=64, bias=True)
-dh1 = DynTanh(ln1, on=C, bias=True)
-ln2 = Linear(dh1, on=C, to=32, bias=True)
-dh2 = DynTanh(ln2, on=C, bias=True)
-e = Sequential(ln1, dh1, ln2, dh2)
-p = Sequential(StopGradient(e), Patch(e, on=(H, W), coordinates=compbine_patches(square(1), square(2)), stat="max"))
-t = Thread(Id(e), p, on=C)
+e = (
+    Linear(on=C, to=64, bias=True)
+    >> DynTanh(on=C, bias=True)
+    >> Linear(on=C, to=32, bias=True)
+    >> DynTanh(on=C, bias=True)
+)
+p = StopGradient() >> Patch(on=(H, W), coordinates=compbine_patches(square(1), square(2)), stat="max")
+t = Thread(Id(), p, on=C)
 # layer = Id(ctx)
-layer = Sequential(e, t, Gaussian(t, on=C, to=2)).module()
+ctx = TransformContext(input_shapes=shapes(i), rngs=Rngs(2112))
+layer = (e >> t >> Gaussian(on=C, to=2)).module(ctx)
 # layer = e
 
 
@@ -48,3 +48,7 @@ x = nnx.nn.initializers.normal(stddev=1)(Rngs(123).input(), (3, 3, 256, 256))
 l = train(x, layer)
 l
 # %%
+from jax import numpy as jnp
+
+covars = jnp.arange(1, 17).reshape((4, 4))
+covars_sim = jnp.tril(covars) + jnp.tril(covars, -1).transpose()

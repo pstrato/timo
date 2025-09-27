@@ -10,11 +10,9 @@ from timo.transform_module import TransformModule
 
 
 class Id(TransformFactory):
-    def __init__(self, ctx: TransformContext):
-        super().__init__(ctx, ctx.input_shapes)
 
-    def module(self):
-        return TransformModule[Array, Array](id)
+    def create_module(self, ctx: TransformContext):
+        return ctx.input_shapes, TransformModule[Array, Array](id)
 
 
 def id(inputs, info, out):
