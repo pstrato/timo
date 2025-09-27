@@ -6,38 +6,40 @@ B, C, H, W = name("B"), name("C"), name("H"), name("W")
 i = shape(B, (C, 3), H, W)
 
 # %%
-from timo import shapes, Transform, Context
-from timo.transforms.id import Id
+from timo import shapes, Transform, Context, Out
+from timo.transforms.function import Id, LeakyReLU
 from timo.transforms.stop_gradient import StopGradient
 from timo.transforms.linear import Linear
-from timo.transforms.dyntanh import DynTanh
 from timo.transforms.patch import Patch, square, compbine_patches
 from timo.transforms.thread import Thread
 from timo.transforms.guassian import Gaussian
+from timo.processes.unit_output import UnitOutput
 
 from flax.nnx.rnglib import Rngs
 from flax import nnx
 
 e = (
-    Linear(on=C, to=64, bias=True)
-    >> DynTanh(on=C, bias=True)
-    >> Linear(on=C, to=32, bias=True)
-    >> DynTanh(on=C, bias=True)
+    Linear(on=C, to=64, bias=True) + UnitOutput(on=C, weight=0.1)
+    >> LeakyReLU()
+    >> Linear(on=C, to=32, bias=True) + UnitOutput(on=C, weight=0.1)
+    >> LeakyReLU()
 )
 p = StopGradient() >> Patch(on=(H, W), coordinates=compbine_patches(square(1), square(2)), stat="max")
 t = Thread(Id(), p, on=C)
 # layer = Id(ctx)
 ctx = Context(input_shapes=shapes(i), rngs=Rngs(2112))
-layer = (e >> t >> Gaussian(on=C, to=2)).module(ctx)
+layer = (e >> t >> Gaussian(on=C, to=2)).transform(ctx)
 # layer = e
 
 
 @nnx.jit
 def train(x, model: Transform):
-    def loss_fn(model):
-        y = model(x)
-        return (y**2).mean()
+    def loss_fn(model: Transform):
+        out = Out()
+        y = model(x, out=out)
+        return (y**2).mean() + out.loss_sum()
 
+    model.train()
     loss = nnx.value_and_grad(loss_fn)(model)
     return loss
 
