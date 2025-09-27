@@ -16,10 +16,10 @@ class Sequential(Factory):
         super().__init__()
         self.transforms = transforms
 
-    def create_module(self, ctx: Context):
+    def create_transform(self, ctx: Context):
         modules = []
         for transform in self.transforms:
-            module = transform.module(ctx)
+            module = transform.transform(ctx)
             modules.append(module)
             ctx = ctx.push(transform)
         return ctx.input_shapes, Transform[Array, Array](sequential, transforms=modules)

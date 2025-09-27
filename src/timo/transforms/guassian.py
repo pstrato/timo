@@ -24,7 +24,7 @@ class Gaussian(Factory):
         self.on = on
         self.to = to
 
-    def create_module(self, ctx: Context):
+    def create_transform(self, ctx: Context):
         from timo.sized_named_axis import size
 
         input_shape = ctx.input_shapes.single_shape()

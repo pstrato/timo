@@ -13,7 +13,7 @@ from jax.lax import stop_gradient
 
 
 class StopGradient(Factory):
-    def create_module(self, ctx: Context):
+    def create_transform(self, ctx: Context):
         return ctx.input_shapes, Transform[Array, Array](transform)
 
 

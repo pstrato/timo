@@ -5,9 +5,9 @@ if TYPE_CHECKING:
     from timo.named_axis import NamedAxis
     from timo.named_shape import NamedShape
     from timo.named_shape_sequence import NamedShapeSequence
-
-from timo.transform import Transform
-from timo.context import Context
+    from timo.transform import Transform
+    from timo.context import Context
+    from timo.process import Process
 
 from flax.nnx import vmap
 
@@ -30,16 +30,16 @@ class Factory:
             raise ValueError("Transform shape not set")
         return self._output_shapes
 
-    def module(self, ctx: Context) -> Transform:
+    def transform(self, ctx: Context) -> Transform:
         from timo.named_shape_sequence import shapes
 
         self._ctx = ctx
         self._input_shapes = ctx.input_shapes
-        output_shapes, module = self.create_module(ctx)
+        output_shapes, module = self.create_transform(ctx)
         self._output_shapes = shapes(output_shapes)
         return module
 
-    def create_module(self, ctx: Context) -> tuple[NamedShapeSequence | NamedShape, Transform]:
+    def create_transform(self, ctx: Context) -> tuple[NamedShapeSequence | NamedShape, Transform]:
         raise NotImplementedError()
 
     def vmap(self, function: callable, non_mapped_args: tuple, *on: str | NamedAxis):
@@ -63,3 +63,8 @@ class Factory:
             transforms.append(value)
 
         return Sequential(*transforms)
+
+    def __add__(self, process: Process) -> Factory:
+        from timo.process import ProcessFactory
+
+        return ProcessFactory(process, self)

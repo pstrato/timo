@@ -71,7 +71,7 @@ class Patch(Factory):
         self.axis = axis
         self.stat = stat
 
-    def create_module(self, ctx: Context):
+    def create_transform(self, ctx: Context):
         from timo.named_shape import shape
 
         coordinates = self.coordinates(self.on)

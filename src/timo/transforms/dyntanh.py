@@ -25,7 +25,7 @@ class DynTanh(Factory):
         self.bias = bias
         self.wide = wide
 
-    def create_module(self, ctx: Context):
+    def create_transform(self, ctx: Context):
         in_size = ctx.in_size(self.on)
         scale_size = in_size if not self.wide else 1
         scale = ctx.params("scale", scale_size, default_scale_init)

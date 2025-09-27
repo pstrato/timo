@@ -24,7 +24,7 @@ class Linear(Factory):
         self.to = to
         self.bias = bias
 
-    def create_module(self, ctx: Context):
+    def create_transform(self, ctx: Context):
         from timo.sized_named_axis import size
 
         in_size = ctx.in_size(self.on)

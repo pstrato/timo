@@ -20,7 +20,7 @@ class MoveAxis(Factory):
         self.axis = axis
         self.to = to
 
-    def create_module(self, ctx: Context):
+    def create_transform(self, ctx: Context):
         input_shape = ctx.input_shapes.single_shape()
         output_shape = input_shape.moveaxis(self.axis, self.to)
 

@@ -19,7 +19,7 @@ class Thread(Factory):
         self.transforms = transforms
         self.on = on
 
-    def create_module(self, ctx: Context):
+    def create_transform(self, ctx: Context):
         from timo.sized_named_axis import size
 
         if len(self.transforms) == 0:
@@ -27,7 +27,7 @@ class Thread(Factory):
 
         modules = []
         for transform in self.transforms:
-            modules.append(transform.module(ctx))
+            modules.append(transform.transform(ctx))
 
         first_transform = self.transforms[0]
         first_output_shape = first_transform.output_shapes.single_shape()
