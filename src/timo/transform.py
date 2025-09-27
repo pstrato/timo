@@ -24,6 +24,13 @@ class Transform(Module, Generic[I, O]):
         for name, param in params.items():
             setattr(self, name, param)
         self.args = params
+        self.training = True
+
+    def train(self, **attributes):
+        return super().train(**attributes, training=True)
+
+    def eval(self, **attributes):
+        return super().eval(**attributes, training=False)
 
     def __call__(self, inputs: I, info: Info | None = None, out: Out | None = None) -> O:
         return self.transform(inputs, info=info, out=out, **self.args)
