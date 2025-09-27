@@ -17,7 +17,7 @@ O = TypeVar("O", bound=Array | tuple[Array, ...])
 from flax.nnx import Module
 
 
-class TransformModule(Module, Generic[I, O]):
+class Transform(Module, Generic[I, O]):
     def __init__(self, transform: Callable[[I, Info, Out], O], **params: Param):
         Module.__init__(self)
         self.transform = transform

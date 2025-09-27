@@ -2,19 +2,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from timo.transform_context import TransformContext
+    from timo.context import Context
     from timo.info import Info
     from timo.out import Out
 
 from jax import Array
-from timo.transform_factory import TransformFactory
-from timo.transform_module import TransformModule
+from timo.factory import Factory
+from timo.transform import Transform
 from jax.lax import stop_gradient
 
 
-class StopGradient(TransformFactory):
-    def create_module(self, ctx: TransformContext):
-        return ctx.input_shapes, TransformModule[Array, Array](transform)
+class StopGradient(Factory):
+    def create_module(self, ctx: Context):
+        return ctx.input_shapes, Transform[Array, Array](transform)
 
 
 def transform(input: Array, info: Info, out: Out):

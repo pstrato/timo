@@ -2,14 +2,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from timo.transform_context import TransformContext
+    from timo.context import Context
     from timo.named_axis import NamedAxis
     from timo.info import Info
     from timo.out import Out
 
 from jax import Array
-from timo.transform_factory import TransformFactory
-from timo.transform_module import TransformModule
+from timo.factory import Factory
+from timo.transform import Transform
 from flax import nnx
 import jax.numpy as jnp
 
@@ -18,13 +18,13 @@ default_center_init = nnx.nn.initializers.lecun_normal()
 default_covar_init = nnx.nn.initializers.ones_init()
 
 
-class Gaussian(TransformFactory):
+class Gaussian(Factory):
     def __init__(self, on: str | NamedAxis, to: int | None = None):
         super().__init__()
         self.on = on
         self.to = to
 
-    def create_module(self, ctx: TransformContext):
+    def create_module(self, ctx: Context):
         from timo.sized_named_axis import size
 
         input_shape = ctx.input_shapes.single_shape()
@@ -37,7 +37,7 @@ class Gaussian(TransformFactory):
         transform = gaussian
         transform = nnx.vmap(transform, in_axes=(None, None, None, -1, -1), out_axes=-1)
         transform = self.vmap(transform, (None,) * 4, self.on)
-        return output_shape, TransformModule[Array, Array](transform, center=center, inv_covar=inv_covar)
+        return output_shape, Transform[Array, Array](transform, center=center, inv_covar=inv_covar)
 
 
 def gaussian(inputs: Array, info: Info, out: Out, center: nnx.Param, inv_covar: nnx.Param | None):

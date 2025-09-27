@@ -6,13 +6,13 @@ if TYPE_CHECKING:
     from timo.named_shape import NamedShape
     from timo.named_shape_sequence import NamedShapeSequence
 
-from timo.transform_module import TransformModule
-from timo.transform_context import TransformContext
+from timo.transform import Transform
+from timo.context import Context
 
 from flax.nnx import vmap
 
 
-class TransformFactory:
+class Factory:
     def __init__(self):
         super().__init__()
         self._input_shapes: NamedShapeSequence | None = None
@@ -30,7 +30,7 @@ class TransformFactory:
             raise ValueError("Transform shape not set")
         return self._output_shapes
 
-    def module(self, ctx: TransformContext) -> TransformModule:
+    def module(self, ctx: Context) -> Transform:
         from timo.named_shape_sequence import shapes
 
         self._ctx = ctx
@@ -39,7 +39,7 @@ class TransformFactory:
         self._output_shapes = shapes(output_shapes)
         return module
 
-    def create_module(self, ctx: TransformContext) -> tuple[NamedShapeSequence | NamedShape, TransformModule]:
+    def create_module(self, ctx: Context) -> tuple[NamedShapeSequence | NamedShape, Transform]:
         raise NotImplementedError()
 
     def vmap(self, function: callable, non_mapped_args: tuple, *on: str | NamedAxis):
@@ -49,7 +49,7 @@ class TransformFactory:
             function = vmap(function, in_axes=(-1, *non_mapped_args), out_axes=-1)
         return function
 
-    def __rshift__(self, value: TransformFactory):
+    def __rshift__(self, value: Factory):
         from timo.transforms.sequential import Sequential
 
         transforms = []

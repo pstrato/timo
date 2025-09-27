@@ -6,7 +6,7 @@ B, C, H, W = name("B"), name("C"), name("H"), name("W")
 i = shape(B, (C, 3), H, W)
 
 # %%
-from timo import shapes, TransformModule, TransformContext
+from timo import shapes, Transform, Context
 from timo.transforms.id import Id
 from timo.transforms.stop_gradient import StopGradient
 from timo.transforms.linear import Linear
@@ -27,13 +27,13 @@ e = (
 p = StopGradient() >> Patch(on=(H, W), coordinates=compbine_patches(square(1), square(2)), stat="max")
 t = Thread(Id(), p, on=C)
 # layer = Id(ctx)
-ctx = TransformContext(input_shapes=shapes(i), rngs=Rngs(2112))
+ctx = Context(input_shapes=shapes(i), rngs=Rngs(2112))
 layer = (e >> t >> Gaussian(on=C, to=2)).module(ctx)
 # layer = e
 
 
 @nnx.jit
-def train(x, model: TransformModule):
+def train(x, model: Transform):
     def loss_fn(model):
         y = model(x)
         return (y**2).mean()

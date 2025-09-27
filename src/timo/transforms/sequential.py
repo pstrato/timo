@@ -4,28 +4,28 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from timo.info import Info
     from timo.out import Out
-    from timo.transform_context import TransformContext
+    from timo.context import Context
 
 from jax import Array
-from timo.transform_factory import TransformFactory
-from timo.transform_module import TransformModule
+from timo.factory import Factory
+from timo.transform import Transform
 
 
-class Sequential(TransformFactory):
-    def __init__(self, *transforms: TransformFactory):
+class Sequential(Factory):
+    def __init__(self, *transforms: Factory):
         super().__init__()
         self.transforms = transforms
 
-    def create_module(self, ctx: TransformContext):
+    def create_module(self, ctx: Context):
         modules = []
         for transform in self.transforms:
             module = transform.module(ctx)
             modules.append(module)
             ctx = ctx.push(transform)
-        return ctx.input_shapes, TransformModule[Array, Array](sequential, transforms=modules)
+        return ctx.input_shapes, Transform[Array, Array](sequential, transforms=modules)
 
 
-def sequential(inputs: Array, transforms: tuple[TransformFactory, ...], info: Info, out: Out):
+def sequential(inputs: Array, transforms: tuple[Factory, ...], info: Info, out: Out):
     outputs = inputs
     for transform in transforms:
         outputs = transform(outputs, info=info, out=out)

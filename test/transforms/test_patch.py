@@ -2,11 +2,11 @@ import jax.numpy as jnp
 
 
 def test_patch():
-    from timo import shape, shapes, TransformContext
+    from timo import shape, shapes, Context
     from timo.transforms.patch import Patch, square
 
     i = shape("H", "W")
-    ctx = TransformContext(input_shapes=shapes(i))
+    ctx = Context(input_shapes=shapes(i))
     p = Patch(on=("H", "W"), coordinates=square(1), stat=None)
 
     x = jnp.array([[1, 2], [3, 4]])
@@ -21,11 +21,11 @@ def test_patch():
 
 
 def test_patch_max():
-    from timo import shape, shapes, TransformContext
+    from timo import shape, shapes, Context
     from timo.transforms.patch import Patch, square
 
     i = shape("H", "W")
-    ctx = TransformContext(input_shapes=shapes(i))
+    ctx = Context(input_shapes=shapes(i))
     p = Patch(on=("H", "W"), coordinates=square(1), stat="max")
 
     x = jnp.array([[1, 2], [3, 4]])
@@ -35,11 +35,11 @@ def test_patch_max():
 
 
 def test_patch_mean():
-    from timo import shape, shapes, TransformContext
+    from timo import shape, shapes, Context
     from timo.transforms.patch import Patch, square
 
     i = shape("H", "W")
-    ctx = TransformContext(input_shapes=shapes(i))
+    ctx = Context(input_shapes=shapes(i))
     p = Patch(on=("H", "W"), coordinates=square(1), stat="mean")
 
     x = jnp.array([[1, 2], [3, 4]])

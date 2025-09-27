@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Callable
     from jax import Array
-    from timo.transform_context import TransformContext
+    from timo.context import Context
     from timo.named_axis import NamedAxis
     from timo.info import Info
     from timo.out import Out
@@ -12,8 +12,8 @@ if TYPE_CHECKING:
     PatchCoordinates = Callable[[tuple[NamedAxis, ...]], tuple[tuple[int, ...]]]
 
 from functools import cache
-from timo.transform_factory import TransformFactory
-from timo.transform_module import TransformModule
+from timo.factory import Factory
+from timo.transform import Transform
 from jax import numpy as jnp
 
 
@@ -57,7 +57,7 @@ def padding(on: tuple[NamedAxis, ...], coordinates: tuple[tuple[int, ...]]):
     return tuple(padding)
 
 
-class Patch(TransformFactory):
+class Patch(Factory):
     def __init__(
         self,
         on: tuple[str | NamedAxis, ...],
@@ -71,7 +71,7 @@ class Patch(TransformFactory):
         self.axis = axis
         self.stat = stat
 
-    def create_module(self, ctx: TransformContext):
+    def create_module(self, ctx: Context):
         from timo.named_shape import shape
 
         coordinates = self.coordinates(self.on)
@@ -95,7 +95,7 @@ class Patch(TransformFactory):
             raise ValueError(f"Unsupported stat: `{self.stat}`")
 
         transform = self.vmap(transform, (None,) * 4, *self.on)
-        return output_shape, TransformModule(transform, padding=p, coordinates=coordinates)
+        return output_shape, Transform(transform, padding=p, coordinates=coordinates)
 
 
 def _patch(inputs: Array, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]], pad_value: float) -> Array:
