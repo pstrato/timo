@@ -33,17 +33,16 @@ class Gaussian(TransformFactory):
         output_shape = input_shape.resize(size(self.on, to_size))
 
         center = ctx.params("center", (in_size, to_size), default_center_init)
-        covar = nnx.Param(jnp.stack([jnp.eye(in_size) for _ in range(to_size)], axis=-1))
+        inv_covar = nnx.Param(jnp.stack([jnp.eye(in_size) for _ in range(to_size)], axis=-1))
         transform = gaussian
         transform = nnx.vmap(transform, in_axes=(None, None, None, -1, -1), out_axes=-1)
         transform = self.vmap(transform, (None,) * 4, self.on)
-        return output_shape, TransformModule[Array, Array](transform, center=center, covar=covar)
+        return output_shape, TransformModule[Array, Array](transform, center=center, inv_covar=inv_covar)
 
 
-def gaussian(inputs: Array, info: Info, out: Out, center: nnx.Param, covar: nnx.Param | None):
+def gaussian(inputs: Array, info: Info, out: Out, center: nnx.Param, inv_covar: nnx.Param | None):
     delta = inputs - center
-    covar = jnp.abs(jnp.tril(covar) + jnp.tril(covar, -1).transpose())
-    covar_inv = jnp.linalg.inv(covar)
+    inv_covar = jnp.abs(jnp.tril(inv_covar) + jnp.tril(inv_covar, -1).transpose())
 
-    outputs = jnp.exp(-0.5 * delta.transpose() @ covar_inv @ delta)
+    outputs = jnp.exp(-0.5 * delta.transpose() @ inv_covar @ delta)
     return outputs
