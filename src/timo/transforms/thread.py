@@ -4,16 +4,15 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from timo.named_axis import NamedAxis
     from timo.context import Context
-    from timo.info import Info
-    from timo.out import Out
 
 from jax import Array
 from timo.factory import Factory
 from timo.transform import Transform
 from jax.lax import concatenate
+from flax import nnx
 
 
-class Thread(Factory):
+class Thread(Factory[Array, Array]):
     def __init__(self, *transforms: Factory, on: str | NamedAxis):
         super().__init__()
         self.transforms = transforms
@@ -45,11 +44,11 @@ class Thread(Factory):
             concat_size += other_output_shape[self.on].set_size
         output_shape = first_output_shape.resize(size(self.on, concat_size))
 
-        return output_shape, Transform[Array, Array](thread, transforms=modules, axis=axis)
+        return Transform[Array, Array](thread, ctx, output_shape, data={"transforms": modules}, static={"axis": axis})
 
 
-def thread(inputs: Array, info: Info, out: Out, transforms: tuple[Factory, ...], axis: int):
+def thread(inputs: Array, data: nnx.Dict, transforms: tuple[Transform, ...], axis: int):
     outputs = []
     for transform in transforms:
-        outputs.append(transform(inputs, info=info, out=out))
+        outputs.append(transform(inputs, data))
     return concatenate(outputs, dimension=axis)

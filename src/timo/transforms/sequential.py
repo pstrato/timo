@@ -2,31 +2,32 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from timo.info import Info
-    from timo.out import Out
     from timo.context import Context
 
 from jax import Array
+from flax import nnx
 from timo.factory import Factory
 from timo.transform import Transform
 
 
-class Sequential(Factory):
+class Sequential(Factory[Array, Array]):
     def __init__(self, *transforms: Factory):
         super().__init__()
         self.transforms = transforms
 
     def create_transform(self, ctx: Context):
+
+        output_ctx = ctx
         modules = []
         for transform in self.transforms:
             module = transform.transform(ctx)
             modules.append(module)
-            ctx = ctx.push(transform)
-        return ctx.input_shapes, Transform[Array, Array](sequential, transforms=modules)
+            output_ctx = module.output_ctx
+        return Transform[Array, Array](sequential, ctx, output_ctx.input_shapes, data={"transforms": modules})
 
 
-def sequential(inputs: Array, transforms: tuple[Factory, ...], info: Info, out: Out):
+def sequential(inputs: Array, data: nnx.Dict, transforms: tuple[Transform, ...]):
     outputs = inputs
     for transform in transforms:
-        outputs = transform(outputs, info=info, out=out)
+        outputs = transform(outputs, data)
     return outputs
