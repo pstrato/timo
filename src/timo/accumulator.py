@@ -17,7 +17,7 @@ class Accumulator(nnx.Module):
     def __getitem__(self, key):
         return self.sum_counts[key]
 
-    def add_value(self, value: int | float | Array | None, key: str, weight: float = 1):
+    def add_value(self, value: int | float | Array | None, key: str, weight: float | Array = 1):
         if value is None:
             return
         try:
@@ -31,7 +31,7 @@ class Accumulator(nnx.Module):
             key_sum_count.add_value(value)
         return self
 
-    def add_sum_count(self, sum_count: SumCount, key, weight: float = 1):
+    def add_sum_count(self, sum_count: SumCount, key, weight: float | Array = 1):
         try:
             key_sum_count = self.sum_counts.get(key)
         except AttributeError:
@@ -43,7 +43,7 @@ class Accumulator(nnx.Module):
             key_sum_count.add_sum_count(sum_count, weight=weight)
         return self
 
-    def add_accumulator(self, accumulator: Accumulator, weight: float = 1):
+    def add_accumulator(self, accumulator: Accumulator, weight: float | Array = 1):
         for key, key_sum_count in accumulator.sum_counts.items():
             self.add_sum_count(key_sum_count, key, weight=weight)
         return self
