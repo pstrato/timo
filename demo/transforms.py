@@ -12,7 +12,7 @@ from timo.transforms.stop_gradient import StopGradient
 from timo.transforms.linear import Linear
 from timo.transforms.patch import Patch, square, compbine_patches
 from timo.transforms.thread import Thread
-from timo.transforms.guassian import Gaussian
+from timo.transforms.gaussian import Gaussian
 
 from flax.nnx.rnglib import Rngs
 from flax import nnx

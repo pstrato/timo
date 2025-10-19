@@ -26,8 +26,8 @@ i = shape(B, (D, 2))
 # %%
 from timo.transforms.linear import Linear
 from timo.transforms.function import LeakyReLU
-from timo.transforms.guassian import Gaussian
-from timo.transforms.guassian_activation import GaussianActivation
+from timo.transforms.gaussian import Gaussian
+from timo.transforms.gaussian_activation import GaussianActivation
 from timo.transforms.softmax import Softmax
 from timo import shapes, Context, Factory
 from flax.nnx.rnglib import Rngs
