@@ -16,7 +16,7 @@ class SumCount(nnx.Module):
         self.sum = nnx.Variable((sum or 0) * weight)
         self.count = nnx.Variable(count or 0)
 
-    def add_value(self, value: int | float | Array, weight: float = 1):
+    def add_value(self, value: int | float | Array, weight: float | Array = 1):
         if isinstance(value, int) or isinstance(value, float):
             self.sum.value += value
             self.count.value += 1
@@ -25,17 +25,17 @@ class SumCount(nnx.Module):
             self.count.value += value.size
         return self
 
-    def detached_add_value(self, value: Array, weight: float = 1):
+    def detached_add_value(self, value: Array, weight: float | Array = 1):
         self.sum.value += stop_gradient(value).sum() * weight
         self.count.value += value.size
         return self
 
-    def add_sum_count(self, sum_count: SumCount, weight: float = 1):
+    def add_sum_count(self, sum_count: SumCount, weight: float | Array = 1):
         self.sum.value += sum_count.sum * weight
         self.count.value += sum_count.count
         return self
 
-    def detached_add_sum_count(self, sum_count: SumCount, weight: float = 1):
+    def detached_add_sum_count(self, sum_count: SumCount, weight: float | Array = 1):
         self.sum.value += stop_gradient(sum_count.sum) * weight
         self.count.value += sum_count.count
         return self
