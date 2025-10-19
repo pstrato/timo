@@ -2,29 +2,46 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from flax.nnx import Param
-    from typing import Callable
-    from timo.info import Info
-    from timo.out import Out
+    from typing import Callable, Any
+    from timo.named_shape import NamedShape
+    from timo.named_shape_sequence import NamedShapeSequence
+    from timo.context import Context
 
-from typing import TypeVar, Generic
+from typing import Generic, TypeVar
 
-from jax import Array
+I = TypeVar("I")
+O = TypeVar("O")
 
-I = TypeVar("I", bound=Array | tuple[Array, ...])
-O = TypeVar("O", bound=Array | tuple[Array, ...])
-
-from flax.nnx import Module
+from flax import nnx
 
 
-class Transform(Module, Generic[I, O]):
-    def __init__(self, transform: Callable[[I, Info, Out], O], **params: Param):
-        Module.__init__(self)
-        self.transform = transform
-        for name, param in params.items():
-            setattr(self, name, param)
-        self.args = params
+class Transform(nnx.Module, Generic[I, O]):
+    def __init__(
+        self,
+        transform: Callable,
+        ctx: Context,
+        output_shapes: NamedShape | NamedShapeSequence | None = None,
+        data: dict[str, Any] = {},
+        static: dict[str, Any] = {},
+    ):
+        from timo.named_shape_sequence import shapes
+        from timo.context import Context
+
+        nnx.Module.__init__(self)
+        self.transform = nnx.static(transform)
         self.training = True
+        self.data = nnx.data(data)
+        self.input_ctx = nnx.data(ctx)
+        self.output_ctx = nnx.data(Context(ctx, input_shapes=shapes(output_shapes or ctx.input_shapes)))
+        self.static = nnx.static(static)
+
+    @property
+    def input_shapes(self):
+        return self.input_ctx.input_shapes
+
+    @property
+    def output_shapes(self):
+        return self.output_ctx.input_shapes
 
     def train(self, **attributes):
         return super().train(**attributes, training=True)
@@ -32,5 +49,5 @@ class Transform(Module, Generic[I, O]):
     def eval(self, **attributes):
         return super().eval(**attributes, training=False)
 
-    def __call__(self, inputs: I, info: Info | None = None, out: Out | None = None) -> O:
-        return self.transform(inputs, info=info, out=out, **self.args)
+    def __call__(self, inputs: I, data: nnx.Dict | None = None) -> O:
+        return self.transform(inputs, data, **self.static, **self.data)

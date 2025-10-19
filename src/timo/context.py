@@ -43,8 +43,8 @@ class Context:
     def initializer(self, factory: Factory, kind, default=_unset) -> Initializer:
         return self.get(("initializer", type(factory), kind), default)
 
-    def params(self, kind: str, shape: int | tuple[int, ...], default_init: Initializer):
-        return Param(self.initializer(self, kind, default_init)(self.rngs.params(), shape))
+    def params(self, factory: Factory, kind: str, shape: int | tuple[int, ...], default_init: Initializer):
+        return Param(self.initializer(factory, kind, default_init)(self.rngs.params(), shape))
 
     def push(self, factory: Factory):
         return Context(self, input_shapes=factory.output_shapes)
