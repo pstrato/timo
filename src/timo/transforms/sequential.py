@@ -20,7 +20,7 @@ class Sequential(Factory[Array, Array]):
         output_ctx = ctx
         modules = []
         for transform in self.transforms:
-            module = transform.transform(ctx)
+            module = transform.transform(output_ctx)
             modules.append(module)
             output_ctx = module.output_ctx
         return Transform[Array, Array](sequential, ctx, output_ctx.input_shapes, data={"transforms": modules})
