@@ -45,7 +45,6 @@ class NamedShapeSequence:
     def shapes(self):
         return self._shapes
 
-    @property
     def __getitem__(self, index: int) -> NamedShape:
         return self._shapes[index]
 
@@ -55,7 +54,7 @@ class NamedShapeSequence:
         return self._shapes[0]
 
 
-def shapes(*shapes: NamedShape):
+def shapes(*shapes: NamedShape | NamedShapeSequence):
     from timo.named_shape import NamedShape, shape
 
     all_shapes = []
