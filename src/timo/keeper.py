@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from typing import Iterable
-    from timo.train import Epoch
+    from timo.fit import Epoch
 
 
 class Keeper:
