@@ -4,12 +4,12 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Callable
     from timo.named_axis import NamedAxis
-    from timo.named_shape import NamedShape
-    from timo.named_shape_sequence import NamedShapeSequence
     from timo.transform import Transform
     from timo.context import Context
     from timo.observer import Observer
 
+from timo.out import Out
+from pydantic import BaseModel, ConfigDict
 from typing import Generic, TypeVar
 
 I = TypeVar("I")
@@ -18,9 +18,12 @@ O = TypeVar("O")
 from flax.nnx import vmap
 
 
-class Factory(Generic[I, O]):
-    def __init__(self):
-        super().__init__()
+class Factory(BaseModel, Generic[I, O]):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def __init__(self, **data):
+        Generic.__init__(self)
+        BaseModel.__init__(self, **data)
         self._input_ctx: Context | None = None
         self._output_ctx: Context | None = None
 
@@ -76,9 +79,9 @@ class Factory(Generic[I, O]):
         else:
             transforms.append(value)
 
-        return Sequential(*transforms)
+        return Sequential(transforms=tuple(transforms))
 
     def __add__(self, observer: Observer) -> Factory:
         from timo.observer import ObserverFactory
 
-        return ObserverFactory[I, O](self, observer)
+        return ObserverFactory[I, O](factory=self, observer=observer)
