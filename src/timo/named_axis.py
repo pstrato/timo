@@ -1,3 +1,7 @@
+from pydantic import BeforeValidator
+from typing import Annotated
+
+
 class NamedAxis:
     __slot__ = ["_name"]
 
@@ -38,3 +42,6 @@ def name(value: str | NamedAxis):
     if isinstance(value, str):
         return NamedAxis(value)
     raise ValueError(f"Expected str or NamedAxis, got `{type(value)}`")
+
+
+NamedAxisField = Annotated[NamedAxis, BeforeValidator(name)]
