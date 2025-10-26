@@ -18,7 +18,7 @@ from timo.loss import (
     constant,
     rmse,
 )
-from timo.train import train, StopCondition, StopAfterEpoch
+from timo.fit import fit, StopCondition, StopAfterEpoch
 from timo.batch import Batch, stack, as_list
 from timo.loader import Loader, DataLoader, ShuffleLoader, BatchLoader
 from timo.keeper import Keeper
