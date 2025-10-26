@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    pass
+    from typing import Self
 
 from flax import nnx
 
@@ -18,31 +18,25 @@ class Batch(nnx.Module):
         load_time: float | None = None,
     ) -> None:
         super().__init__()
-        self.inputs = inputs
-        self.targets = targets
-        self.step = step
-        self.epoch = epoch
-        self.index = index
-        self.load_time = load_time
+        self.inputs = nnx.data(inputs)
+        self.targets = nnx.data(targets)
+        self.step = nnx.static(step)
+        self.epoch = nnx.static(epoch)
+        self.index = nnx.static(index)
+        self.load_time = nnx.static(load_time)
 
-    def clone(self, data: dict | None = None, metadata: dict | None = None):
-        if data is not None:
-            inputs = data.get("inputs") or self.inputs
-            targets = data.get("targets") or self.targets
-        else:
-            inputs = self.inputs
-            targets = self.targets
-        if metadata is not None:
-            step = metadata.get("step") or self.step
-            epoch = metadata.get("epoch") or self.epoch
-            index = metadata.get("index") or self.index
-            load_time = metadata.get("load_time") or self.load_time
-        else:
-            step = self.step
-            epoch = self.epoch
-            index = self.index
-            load_time = self.load_time
-        return Batch(inputs, targets, step, epoch, index, load_time)
+    def clone(self, data: dict | None = None, metadata: dict | None = None) -> Self:
+        data = data or {}
+        metadata = metadata or {}
+
+        inputs = data.get("inputs", self.inputs)
+        targets = data.get("targets", self.targets)
+
+        step = metadata.get("step", self.step)
+        epoch = metadata.get("epoch", self.epoch)
+        index = metadata.get("index", self.index)
+        load_time = metadata.get("load_time", self.load_time)
+        return Batch(inputs, targets, step, epoch, index, load_time)  # type: ignore
 
     @staticmethod
     def as_batch(
