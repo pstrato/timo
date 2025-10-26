@@ -39,6 +39,26 @@ class DataLoader(Loader[B]):
         return clone
 
 
+class CachedLoader(Loader[B]):
+    def __init__(self, loader: Loader[B]) -> None:
+        super().__init__()
+        self.loader = loader
+        self._len = None
+        self._get: dict[int, B] = {}
+
+    def __len__(self):
+        _len = self._len
+        if _len is None:
+            self._len = _len = len(self.loader)
+        return _len
+
+    def get(self, index: int, metadata: dict | None = None) -> B:
+        item = self._get.get(index, None)
+        if item is None:
+            self._get[index] = item = self.loader.get(index)
+        return item.clone(metadata=metadata)
+
+
 class ShuffleLoader(Loader[B]):
     def __init__(self, loader: Loader[B]):
         super().__init__()
