@@ -62,7 +62,8 @@ class NamedShape:
         for size in self._sizes:
             if size.axis == axis:
                 found = True
-            sizes.append(size)
+            else:
+                sizes.append(size)
         if raise_if_not_found and not found:
             raise ValueError("Axis not found")
         return NamedShape(*sizes)
