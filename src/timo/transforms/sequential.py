@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from timo.context import Context
+    from timo.out import Out
 
 from jax import Array
 from flax import nnx
@@ -11,9 +12,7 @@ from timo.transform import Transform
 
 
 class Sequential(Factory[Array, Array]):
-    def __init__(self, *transforms: Factory):
-        super().__init__()
-        self.transforms = transforms
+    transforms: tuple[Factory, ...]
 
     def create_transform(self, ctx: Context):
 
@@ -26,8 +25,8 @@ class Sequential(Factory[Array, Array]):
         return Transform[Array, Array](sequential, ctx, output_ctx.input_shapes, data={"transforms": modules})
 
 
-def sequential(inputs: Array, data: nnx.Dict, transforms: tuple[Transform, ...]):
+def sequential(inputs: Array, out: Out, transforms: tuple[Transform, ...]):
     outputs = inputs
     for transform in transforms:
-        outputs = transform(outputs, data)
+        outputs = transform(outputs, out)
     return outputs

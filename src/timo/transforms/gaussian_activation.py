@@ -3,8 +3,9 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from timo.context import Context
-    from timo.named_axis import NamedAxis
+    from timo.out import Out
 
+from timo.named_axis import NamedAxisField
 from jax import Array
 from timo.factory import Factory
 from timo.transform import Transform
@@ -17,14 +18,10 @@ default_spread_init = nnx.nn.initializers.normal()
 
 
 class GaussianActivation(Factory[Array, Array]):
-    def __init__(self, on: str | NamedAxis, eps=1e-4):
-        super().__init__()
-        self.on = on
-        self.eps = eps
+    on: NamedAxisField
+    eps: float = 1e-4
 
     def create_transform(self, ctx: Context):
-        from timo.sized_named_axis import size
-
         in_size = ctx.in_size(self.on)
 
         center = ctx.params(self, "center", (in_size,), default_center_init)
@@ -36,7 +33,7 @@ class GaussianActivation(Factory[Array, Array]):
         )
 
 
-def gaussian(inputs: Array, data: nnx.Dict, center: nnx.Param[Array], spread: nnx.Param[Array], eps: float):
+def gaussian(inputs: Array, out: Out, center: nnx.Param[Array], spread: nnx.Param[Array], eps: float):
     delta = inputs - center
 
     outputs = jnp.exp(-(delta**2) / (spread**2 + eps))

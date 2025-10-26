@@ -3,8 +3,9 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from timo.context import Context
-    from timo.named_axis import NamedAxis
+    from timo.out import Out
 
+from timo.named_axis import NamedAxisField
 from jax import Array
 from timo.factory import Factory
 from timo.transform import Transform
@@ -17,11 +18,9 @@ default_bias_init = nnx.nn.initializers.zeros_init()
 
 
 class DynTanh(Factory[Array, Array]):
-    def __init__(self, on: str | NamedAxis, bias: bool = True, wide: bool = False):
-        super().__init__()
-        self.on = on
-        self.bias = bias
-        self.wide = wide
+    on: NamedAxisField
+    bias: bool = True
+    wide: bool = False
 
     def create_transform(self, ctx: Context):
         in_size = ctx.in_size(self.on)
@@ -35,7 +34,7 @@ class DynTanh(Factory[Array, Array]):
         return Transform[Array, Array](transform, ctx, data={"scale": scale, "bias": bias})
 
 
-def dyntanh(inputs: Array, data: nnx.Dict, scale: nnx.Param, bias: nnx.Param | None):
+def dyntanh(inputs: Array, out: Out, scale: nnx.Param, bias: nnx.Param | None):
     outputs = inputs * scale
     if bias is None:
         return outputs

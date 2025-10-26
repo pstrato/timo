@@ -5,17 +5,16 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from timo.context import Context
 
+from typing import Callable
 from jax import Array
-from flax.nnx import relu, leaky_relu
+from flax.nnx import relu, leaky_relu, sigmoid
 from timo.transform import Transform
 
 
 class Function(Factory[Array, Array]):
-    def __init__(self, function, data: dict = {}, static: dict = {}):
-        super().__init__()
-        self.function = function
-        self.data = data
-        self.static = static
+    function: Callable
+    data: dict = {}
+    static: dict = {}
 
     def create_transform(self, ctx: Context):
         return Transform[Array, Array](call, ctx, data=self.data, static={"function": self.function, **self.static})
@@ -27,7 +26,7 @@ def call(inputs, data, function, **kwargs):
 
 class Id(Function):
     def __init__(self):
-        super().__init__(id)
+        super().__init__(function=id)
 
 
 def id(inputs):
@@ -36,9 +35,14 @@ def id(inputs):
 
 class ReLU(Function):
     def __init__(self):
-        super().__init__(relu)
+        super().__init__(function=relu)
 
 
 class LeakyReLU(Function):
     def __init__(self, negative_slope=0.01):
-        super().__init__(leaky_relu, static={"negative_slope": negative_slope})
+        super().__init__(function=leaky_relu, static={"negative_slope": negative_slope})
+
+
+class Sigmoid(Function):
+    def __init__(self):
+        super().__init__(function=sigmoid)

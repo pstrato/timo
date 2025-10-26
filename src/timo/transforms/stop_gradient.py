@@ -3,10 +3,10 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from timo.context import Context
+    from timo.out import Out
 
 from jax import Array
 from jax.lax import stop_gradient
-from flax import nnx
 from timo.factory import Factory
 from timo.transform import Transform
 
@@ -16,5 +16,5 @@ class StopGradient(Factory[Array, Array]):
         return Transform[Array, Array](transform, ctx)
 
 
-def transform(input: Array, data: nnx.Dict):
+def transform(input: Array, out: Out):
     return stop_gradient(input)

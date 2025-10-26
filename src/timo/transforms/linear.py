@@ -5,6 +5,7 @@ if TYPE_CHECKING:
     from timo.context import Context
     from timo.named_axis import NamedAxis
 
+from timo.named_axis import NamedAxisField
 from jax import Array
 from timo.factory import Factory
 from timo.transform import Transform
@@ -16,11 +17,9 @@ default_bias_init = nnx.nn.initializers.zeros_init()
 
 
 class Linear(Factory[Array, Array]):
-    def __init__(self, on: str | NamedAxis, to: int | None = None, bias: bool = True):
-        super().__init__()
-        self.on = on
-        self.to = to
-        self.bias = bias
+    on: NamedAxisField
+    to: int | None = None
+    bias: bool = True
 
     def create_transform(self, ctx: Context):
         from timo.sized_named_axis import size
@@ -39,7 +38,7 @@ class Linear(Factory[Array, Array]):
         return Transform[Array, Array](transform, ctx, output_shape, data={"kernel": kernel, "bias": bias})
 
 
-def linear(inputs: Array, data: nnx.Dict, kernel: nnx.Param, bias: nnx.Param | None):
+def linear(inputs: Array, Dict, kernel: nnx.Param, bias: nnx.Param | None):
     outputs = inputs @ kernel
     if bias is None:
         return outputs

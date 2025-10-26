@@ -2,12 +2,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Callable
     from timo.context import Context
-    from timo.named_axis import NamedAxis
+    from timo.out import Out
 
-    PatchCoordinates = Callable[[tuple[str | NamedAxis, ...]], tuple[tuple[int, ...]]]
+from typing import Callable
+from timo.named_axis import NamedAxis
 
+PatchCoordinates = Callable[[tuple[str | NamedAxis, ...]], tuple[tuple[int, ...]]]
+
+from timo.named_axis import NamedAxisField
 from functools import cache
 from timo.factory import Factory
 from timo.transform import Transform
@@ -19,7 +22,7 @@ def square(distance: int):
     if distance <= 0:
         raise ValueError()
 
-    def patch(on: tuple[NamedAxis, NamedAxis]):
+    def patch(on: tuple[str | NamedAxis, ...]):
         ndim = len(on)
         if ndim == 2:
             coordinates = []
@@ -37,7 +40,7 @@ def square(distance: int):
 
 
 def compbine_patches(*patch_coordinates: PatchCoordinates):
-    def patch(on: tuple[NamedAxis, ...]):
+    def patch(on: tuple[str | NamedAxis, ...]):
         coordinates = []
         for pc in patch_coordinates:
             coordinates.extend(pc(on))
@@ -56,18 +59,10 @@ def padding(on: tuple[NamedAxis, ...], coordinates: tuple[tuple[int, ...]]):
 
 
 class Patch(Factory[Array, Array]):
-    def __init__(
-        self,
-        on: tuple[str | NamedAxis, ...],
-        coordinates: PatchCoordinates,
-        axis: str | NamedAxis = "P",
-        stat: str | None = None,
-    ):
-        super().__init__()
-        self.on = on
-        self.coordinates = coordinates
-        self.axis = axis
-        self.stat = stat
+    on: tuple[NamedAxisField, ...]
+    coordinates: PatchCoordinates
+    axis: NamedAxisField = "P"  # type: ignore
+    stat: str | None = None
 
     def create_transform(self, ctx: Context):
         from timo.named_shape import shape
@@ -106,21 +101,21 @@ def _patch(inputs: Array, padding: tuple[int, ...], coordinates: tuple[tuple[int
     return outputs
 
 
-def patch(inputs: Array, data: nnx.Dict, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]) -> Array:
+def patch(inputs: Array, out: Out, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]) -> Array:
     return _patch(inputs, padding, coordinates, 0)
 
 
-def patch_min(inputs: Array, data: nnx.Dict, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]) -> Array:
+def patch_min(inputs: Array, out: Out, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]) -> Array:
     outputs = _patch(inputs, padding, coordinates, jnp.inf)
     return jnp.min(outputs, -1)
 
 
-def patch_max(inputs: Array, data: nnx.Dict, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]) -> Array:
+def patch_max(inputs: Array, out: Out, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]) -> Array:
     outputs = _patch(inputs, padding, coordinates, -jnp.inf)
     return jnp.max(outputs, -1)
 
 
-def patch_mean(inputs: Array, data: nnx.Dict, padding: tuple[int, ...], coordinates: tuple[tuple[int]]) -> Array:
+def patch_mean(inputs: Array, out: Out, padding: tuple[int, ...], coordinates: tuple[tuple[int]]) -> Array:
     patch_count = count(inputs.shape, coordinates)
     outputs = _patch(inputs, padding, coordinates, 0)
     outputs = jnp.sum(outputs, -1)

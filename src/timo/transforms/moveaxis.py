@@ -2,10 +2,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from timo.named_axis import NamedAxis
     from timo.named_shape import After, Before
     from timo.context import Context
+    from timo.out import Out
 
+from timo.named_axis import NamedAxisField
 from timo.factory import Factory
 from timo.transform import Transform
 from jax import Array
@@ -14,10 +15,8 @@ from flax import nnx
 
 
 class MoveAxis(Factory[Array, Array]):
-    def __init__(self, axis: str | NamedAxis, to: int | After | Before):
-        super().__init__()
-        self.axis = axis
-        self.to = to
+    axis: NamedAxisField
+    to: int | After | Before
 
     def create_transform(self, ctx: Context):
         input_shape = ctx.input_shapes.single_shape()
@@ -30,5 +29,5 @@ class MoveAxis(Factory[Array, Array]):
         )
 
 
-def moveaxis(inputs: Array, data: nnx.Dict, source: int, destination: int):
+def moveaxis(inputs: Array, out: Out, source: int, destination: int):
     return jnp.moveaxis(inputs, source, destination)

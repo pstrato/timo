@@ -3,8 +3,9 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from timo.context import Context
-    from timo.named_axis import NamedAxis
+    from timo.out import Out
 
+from timo.named_axis import NamedAxisField
 from jax import Array
 from timo.factory import Factory
 from timo.transform import Transform
@@ -16,9 +17,7 @@ default_bias_init = nnx.nn.initializers.zeros_init()
 
 
 class Softmax(Factory[Array, Array]):
-    def __init__(self, on: str | NamedAxis):
-        super().__init__()
-        self.on = on
+    on: NamedAxisField
 
     def create_transform(self, ctx: Context):
         input_shape = ctx.input_shapes.single_shape()
@@ -26,5 +25,5 @@ class Softmax(Factory[Array, Array]):
         return Transform[Array, Array](softmax, ctx, static={"axis": axis})
 
 
-def softmax(inputs: Array, data: nnx.Dict, axis):
+def softmax(inputs: Array, out: Out, axis):
     return nnx.softmax(inputs, axis=axis)
