@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from timo.context import Context
     from timo.transform import Transform
+    from timo.out import Out
 
 from timo.factory import Factory
 from timo.transform import Transform, I, O
@@ -23,27 +24,27 @@ def copy(key, on_train: bool = True, on_eval: bool = True):
     return Observer(copy_outputs, on_train, on_eval, key)
 
 
-def reference_outputs(inputs, data: Dict, observed: Transform, key: str, on_train: bool, on_eval: bool):
-    outputs = observed(inputs, data)
+def reference_outputs(inputs, out: Out, observed: Transform, key: str, on_train: bool, on_eval: bool):
+    outputs = observed(inputs, out)
     training = observed.training
     if on_train and training or (not training and on_eval):
-        data[key] = outputs
+        setattr(out, key, outputs)
     return outputs
 
 
-def detach_outputs(inputs, data: Dict, observed: Transform, key: str, on_train: bool, on_eval: bool):
-    outputs = observed(inputs, data)
+def detach_outputs(inputs, out: Out, observed: Transform, key: str, on_train: bool, on_eval: bool):
+    outputs = observed(inputs, out)
     training = observed.training
     if (on_train and training) or (not training and on_eval):
-        data[key] = observed(stop_gradient(inputs), data)
+        setattr(out, key, observed(stop_gradient(inputs), out))
     return outputs
 
 
-def copy_outputs(inputs, data: Dict, observed: Transform, key: str, on_train: bool, on_eval: bool):
-    outputs = observed(inputs, data)
+def copy_outputs(inputs, out: Out, observed: Transform, key: str, on_train: bool, on_eval: bool):
+    outputs = observed(inputs, out)
     training = observed.training
     if (on_train and training) or (not training and on_eval):
-        data[key] = observed(inputs, data)
+        setattr(out, key, observed(inputs, out))
     return outputs
 
 
@@ -56,20 +57,20 @@ class Observer:
 
 
 class ObserverFactory(Factory[I, O]):
-    def __init__(self, factory: Factory[I, O], observer: Observer):
-        self.factory = factory
-        self.observer = observer
+    factory: Factory[I, O]
+    observer: Observer
 
     def create_transform(self, ctx: Context):
         observed = self.factory.transform(ctx)
         action = self.observer.action
         on_train = self.observer.on_train
         on_eval = self.observer.on_eval
-        keys = self.observer.key
+        key = self.observer.key
+        ctx.add_out(key)
         return Transform(
             action,
             ctx,
-            ctx.input_shapes,
+            observed.output_shapes,
             data={"observed": observed},
-            static={"keys": keys, "on_train": on_train, "on_eval": on_eval},
+            static={"key": key, "on_train": on_train, "on_eval": on_eval},
         )

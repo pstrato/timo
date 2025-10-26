@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Callable
     from jax import Array
-
+    from timo.out import Out
 
 from jax import numpy as jnp
 from flax import nnx
@@ -13,7 +13,7 @@ from timo.accumulator import Accumulator
 
 class Loss(nnx.Module):
 
-    def __call__(self, data: nnx.Dict, accumulator: Accumulator | None = None, weight: float = 1) -> Accumulator:
+    def __call__(self, out: Out, accumulator: Accumulator | None = None, weight: float = 1) -> Accumulator:
         raise NotImplementedError()
 
     def __mul__(self, weight: float):
@@ -41,8 +41,8 @@ class WeightedLoss(Loss):
         self.loss = nnx.static(loss)
         self.weight = nnx.static(weight)
 
-    def __call__(self, data, accumulator=None, weight=1):
-        return self.loss(data, accumulator=accumulator, weight=weight * self.weight)
+    def __call__(self, out, accumulator=None, weight=1):
+        return self.loss(out, accumulator=accumulator, weight=weight * self.weight)
 
 
 class CombinedLoss(Loss):
@@ -50,11 +50,11 @@ class CombinedLoss(Loss):
         super().__init__()
         self.losses = nnx.data(losses)
 
-    def __call__(self, data, accumulator=None, weight=1):
+    def __call__(self, out, accumulator=None, weight=1):
         if accumulator is None:
             accumulator = Accumulator()
         for loss in self.losses:
-            loss(data, accumulator, weight)
+            loss(out, accumulator, weight)
         return accumulator
 
 
@@ -63,19 +63,19 @@ class ProportionalLoss(Loss):
         self.main = nnx.static(loss)
         self.weighted = nnx.static(weighted_losses)
 
-    def __call__(self, data, accumulator=None, weight=1):
+    def __call__(self, out, accumulator=None, weight=1):
 
         if accumulator is None:
             accumulator = Accumulator()
 
         main_accumulator = Accumulator()
-        self.main(data, main_accumulator, weight)
+        self.main(out, main_accumulator, weight)
         accumulator.add_accumulator(main_accumulator)
 
         main_loss = main_accumulator.detached_mean()
         for weighted, weighted_weight in self.weighted:
             weighted_accumulator = Accumulator()
-            weighted(data, weighted_accumulator, 1)
+            weighted(out, weighted_accumulator, 1)
             weighted_loss = weighted_accumulator.detached_mean()
             weighted_scale = main_loss * weighted_weight / weighted_loss
             accumulator.add_accumulator(weighted_accumulator, weighted_scale)
@@ -85,8 +85,8 @@ class ProportionalLoss(Loss):
 class ValueLoss(Loss):
     def __init__(
         self,
-        target: Callable[[nnx.Dict], Array],
-        output: Callable[[nnx.Dict], Array],
+        target: Callable[[Out], Array],
+        output: Callable[[Out], Array],
         function: Callable[[Array, Array], Array],
         key: str,
     ) -> None:
@@ -96,37 +96,37 @@ class ValueLoss(Loss):
         self.function = nnx.static(function)
         self.key = nnx.static(key)
 
-    def __call__(self, data: nnx.Dict, accumulator: Accumulator | None = None, weight: float = 1) -> Accumulator:
+    def __call__(self, out: Out, accumulator: Accumulator | None = None, weight: float = 1) -> Accumulator:
         if accumulator is None:
             accumulator = Accumulator()
-        target = self.target(data)
-        output = self.output(data)
+        target = self.target(out)
+        output = self.output(out)
         loss = self.function(target, output)
         accumulator.add_value(loss, self.key)
         return accumulator
 
 
-def inputs(data: nnx.Dict):
-    return data["inputs"]
+def inputs(out: Out):
+    return out.inputs
 
 
-def targets(data: nnx.Dict):
-    return data["targets"]
+def targets(out: Out):
+    return out.targets
 
 
-def outputs(data: nnx.Dict):
-    return data["outputs"]
+def outputs(out: Out):
+    return out.outputs
 
 
 def data(key: str):
-    def value(data: nnx.Dict):
-        return data[key]
+    def value(out: Out):
+        return getattr(out, key)
 
     return value
 
 
 def constant(constant: int | float | Array):
-    def value(data: nnx.Dict):
+    def value(out: Out):
         return constant
 
     return value

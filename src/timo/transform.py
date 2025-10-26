@@ -7,6 +7,8 @@ if TYPE_CHECKING:
     from timo.named_shape_sequence import NamedShapeSequence
     from timo.context import Context
 
+from timo.out import Out
+
 from typing import Generic, TypeVar
 
 I = TypeVar("I")
@@ -49,5 +51,12 @@ class Transform(nnx.Module, Generic[I, O]):
     def eval(self, **attributes):
         return super().eval(**attributes, training=False)
 
-    def __call__(self, inputs: I, data: nnx.Dict | None = None) -> O:
-        return self.transform(inputs, data, **self.static, **self.data)
+    def __call__(self, inputs: I, out: Out | None = None) -> O:
+        return self.transform(inputs, out, **self.static, **self.data)
+
+    def create_out(self) -> Out:
+        outs = self.input_ctx.out_keys
+        if outs is not None:
+            return Out(outs)
+        else:
+            raise ValueError()
