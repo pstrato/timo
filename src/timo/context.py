@@ -17,6 +17,10 @@ class Context:
     def __init__(self, parent: Context | None = None, **args):
         self.parent = parent
         self.args = args
+        if parent is None:
+            self.out_keys = {"inputs", "targets", "outputs"}
+        else:
+            self.out_keys = None
 
     def get(self, name, default=_unset):
         arg = self.args.get(name, _unset)
@@ -48,3 +52,9 @@ class Context:
 
     def push(self, factory: Factory):
         return Context(self, input_shapes=factory.output_shapes)
+
+    def add_out(self, key: str):
+        if self.out_keys is not None:
+            self.out_keys.add(key)
+        if self.parent is not None:
+            self.parent.add_out(key)
