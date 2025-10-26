@@ -21,7 +21,7 @@ from time import monotonic
 
 e = Linear(on=C, to=64, bias=True) >> LeakyReLU() >> Linear(on=C, to=32, bias=True) >> LeakyReLU()
 p = StopGradient() >> Patch(on=(H, W), coordinates=compbine_patches(square(1), square(2)), stat="max")
-t = Thread(Id(), p, on=C)
+t = Thread(transforms=(Id(), p), on=C)
 # layer = Id(ctx)
 ctx = Context(input_shapes=shapes(i), rngs=Rngs(2112))
 layer = (e >> t >> Gaussian(on=C, to=2)).transform(ctx)

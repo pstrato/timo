@@ -55,7 +55,7 @@ t = f.transform(Context(input_shapes=shapes(i), rngs=Rngs(2112)))
 
 # %%
 from timo import (
-    train,
+    fit,
     Keeper,
     StopAfterEpoch,
     Batch,
@@ -87,7 +87,7 @@ train_loader = BatchLoader(ShuffleLoader(DataLoader(train_data)), batch_size)
 eval_loader = BatchLoader(DataLoader(eval_data), batch_size)
 
 loss = ValueLoss(targets, outputs, rmse, "loss/rmse") * 0.0001
-training = train(t, nnx.Optimizer(t, sgd(0.01), wrt=nnx.Param), StopAfterEpoch(10), loss, train_loader, eval_loader)
+training = fit(t, nnx.Optimizer(t, sgd(0.01), wrt=nnx.Param), StopAfterEpoch(10), loss, train_loader, eval_loader)
 keeper = Keeper()
 training = keeper.keep(training)
 for epoch in training:
