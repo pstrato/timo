@@ -1,7 +1,7 @@
 # %%
 from jax import Array, numpy as jnp
 from jax.random import key, split, normal, uniform
-from timo.observer import ref
+from timo.recorder import ref
 from timo.transform import Transform
 
 C = 5
@@ -35,22 +35,6 @@ from flax import nnx
 
 f = Linear(on=D, to=4) >> Gaussian(on=D) >> Linear(on=D, to=8) >> Gaussian(on=D, to=C)
 t = f.transform(Context(input_shapes=shapes(i), rngs=Rngs(2112)))
-
-
-# class Model(Factory):
-
-#     def create_transform(self, ctx: Context):
-#         encoder = (Linear(on=D, to=16) >> Gaussian(on=D, to=5)).transform(ctx)
-#         decoder = Linear(on=D, to=16).transform(encoder.output_ctx)
-
-#         def transform(inputs, data: nnx.Dict, encoder: Transform, decoder: Transform):
-#             encoded = encoder(inputs, data) + ref("encoded")
-#             decoded = decoder(encoded, data) + ref("decoded")
-#             return decoded
-
-#         return Transform[Array, Array](
-#             transform, ctx, decoder.output_shapes, data={"encoder": encoder, "decoder": decoder}
-#         )
 
 
 # %%
@@ -91,15 +75,7 @@ training = fit(t, nnx.Optimizer(t, sgd(0.01), wrt=nnx.Param), StopAfterEpoch(10)
 keeper = Keeper()
 training = keeper.keep(training)
 for epoch in training:
-    print(
-        epoch.step,
-        "epoch:",
-        epoch.epoch,
-        "loss:",
-        epoch.losses.mean(),
-        "epoch time:",
-        float(epoch.times["epoch time"].sum),
-    )
+    print(epoch)
 print(
     "train:",
     keeper.best_train.epoch,
