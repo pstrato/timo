@@ -46,10 +46,3 @@ def test_patch_mean():
     y = p.transform(ctx)(x)
     assert y.shape == (2, 2)
     assert jnp.allclose(y, jnp.array([[9 / 3, 8 / 3], [7 / 3, 6 / 3]]))
-
-
-def test_patch_count():
-    from timo.transforms.patch import count, square
-
-    c = count((2, 2), square(1)(("H", "W")))
-    assert jnp.allclose(c, jnp.array([[3, 3], [3, 3]]))

@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from timo.context import Context
-    from timo.out import Out
 
 from typing import Callable
 from timo.named_axis import NamedAxis
@@ -14,8 +13,7 @@ from timo.named_axis import NamedAxisField
 from functools import cache
 from timo.factory import Factory
 from timo.transform import Transform
-from jax import numpy as jnp, Array
-from flax import nnx
+from jax import numpy as jnp, Array, lax
 
 
 def square(distance: int):
@@ -58,6 +56,16 @@ def padding(on: tuple[NamedAxis, ...], coordinates: tuple[tuple[int, ...]]):
     return tuple(padding)
 
 
+@cache
+def offset(on: tuple[NamedAxis, ...], coordinates: tuple[tuple[int, ...]]):
+    offset = [[] for _ in on]
+    for coordinate in coordinates:
+        for i, c in enumerate(coordinate):
+            offset[i].append(c)
+    offset = tuple(tuple(o) for o in offset)
+    return offset
+
+
 class Patch(Factory[Array, Array]):
     on: tuple[NamedAxisField, ...]
     coordinates: PatchCoordinates
@@ -87,13 +95,15 @@ class Patch(Factory[Array, Array]):
         else:
             raise ValueError(f"Unsupported stat: `{self.stat}`")
 
-        transform = self.vmap(transform, (None,) * 3, *self.on)
-        return Transform(transform, ctx, output_shape, static={"padding": p, "coordinates": coordinates})
+        o = offset(self.on, coordinates)
+
+        transform = self.vmap(transform, (None,) * 2, *self.on)
+        return Transform(transform, ctx, output_shape, static={"padding": p, "offset": o})
 
 
-def _patch(inputs: Array, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]], pad_value: float) -> Array:
-    patch_index = index(inputs.shape, padding, coordinates)
-    patch_dim_size = len(coordinates)
+def _patch(inputs: Array, padding: tuple[int, ...], offset: tuple[tuple[int, ...], ...], pad_value: float) -> Array:
+    patch_index = index(inputs.shape, padding, offset)
+    patch_dim_size = len(offset[0])
     inputs_shape = inputs.shape
     inputs = jnp.pad(inputs, padding, mode="constant", constant_values=pad_value)
     outputs = inputs[*patch_index]
@@ -101,55 +111,38 @@ def _patch(inputs: Array, padding: tuple[int, ...], coordinates: tuple[tuple[int
     return outputs
 
 
-def patch(inputs: Array, out: Out, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]) -> Array:
-    return _patch(inputs, padding, coordinates, 0)
+def patch(inputs: Array, padding: tuple[int, ...], offset: tuple[tuple[int, ...], ...]) -> Array:
+    return _patch(inputs, padding, offset, 0)
 
 
-def patch_min(inputs: Array, out: Out, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]) -> Array:
-    outputs = _patch(inputs, padding, coordinates, jnp.inf)
+def patch_min(inputs: Array, padding: tuple[int, ...], offset: tuple[tuple[int, ...], ...]) -> Array:
+    outputs = _patch(inputs, padding, offset, jnp.inf)
     return jnp.min(outputs, -1)
 
 
-def patch_max(inputs: Array, out: Out, padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]) -> Array:
-    outputs = _patch(inputs, padding, coordinates, -jnp.inf)
+def patch_max(inputs: Array, padding: tuple[int, ...], offset: tuple[tuple[int, ...], ...]) -> Array:
+    outputs = _patch(inputs, padding, offset, -jnp.inf)
     return jnp.max(outputs, -1)
 
 
-def patch_mean(inputs: Array, out: Out, padding: tuple[int, ...], coordinates: tuple[tuple[int]]) -> Array:
-    patch_count = count(inputs.shape, coordinates)
-    outputs = _patch(inputs, padding, coordinates, 0)
-    outputs = jnp.sum(outputs, -1)
-    return outputs / patch_count
+def patch_mean(inputs: Array, padding: tuple[int, ...], offset: tuple[tuple[int, ...], ...]) -> Array:
+    counts = _patch(jnp.ones_like(inputs), padding, offset, 0).sum(-1)
+    outputs = _patch(inputs, padding, offset, 0).sum(-1)
+    return outputs / counts
 
 
-def index(shape: tuple[int, ...], padding: tuple[int, ...], coordinates: tuple[tuple[int, ...]]):
+def index(shape: tuple[int, ...], padding: tuple[int, ...], offset: tuple[tuple[int, ...], ...]):
     if len(shape) == 2:
-        index = [[], []]
-        for i in range(shape[0]):
-            for j in range(shape[1]):
-                for coordinate in coordinates:
-                    index[0].append(padding[0] + i + coordinate[0])
-                    index[1].append(padding[1] + j + coordinate[1])
-        return jnp.array(index)
-    raise NotImplementedError()
+        i_size = shape[0]
+        j_size = shape[1]
+        input_size = i_size * j_size
+        offset_size = len(offset[0])
 
+        i = jnp.repeat(jnp.repeat(jnp.arange(0, i_size), j_size), offset_size)
+        j = jnp.repeat(jnp.tile(jnp.arange(0, j_size), i_size), offset_size)
 
-def count(shape: tuple[int, ...], coordinates: tuple[tuple[int, ...]]):
-    if len(shape) == 2:
-        count = []
-        for i in range(shape[0]):
-            j_count = []
-            for j in range(shape[1]):
-                patch_count = 0
-                for coordinate in coordinates:
-                    pi = i + coordinate[0]
-                    if pi < 0 or pi >= shape[0]:
-                        continue
-                    pj = j + coordinate[1]
-                    if pj < 0 or pj >= shape[1]:
-                        continue
-                    patch_count += 1
-                j_count.append(patch_count)
-            count.append(j_count)
-        return jnp.array(count)
+        i_offset = jnp.tile(jnp.array(offset[0]), input_size) + padding[0] + i
+        j_offset = jnp.tile(jnp.array(offset[1]), input_size) + padding[1] + j
+
+        return jnp.array((i_offset, j_offset))
     raise NotImplementedError()
