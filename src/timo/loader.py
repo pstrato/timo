@@ -72,6 +72,9 @@ class ShuffleLoader(Loader[B]):
         if len(self._next) == 0:
             self._next = self._shuffle_indices()
         next = self._next.pop()
+        if metadata is None:
+            metadata = {}
+        metadata["index"] = index
         return self._loader.get(next, metadata=metadata)
 
     def _shuffle_indices(self):
@@ -80,6 +83,18 @@ class ShuffleLoader(Loader[B]):
         indices = list(range(len(self._loader)))
         random.shuffle(indices)
         return indices
+
+
+class RepeatLoader(Loader[B]):
+    def __init__(self, loader: Loader[B], repeat: int):
+        self.loader = loader
+        self.repeat = repeat
+
+    def __len__(self):
+        return self.repeat * len(self.loader)
+
+    def get(self, index: int, metadata: dict | None = None) -> B:
+        return self.loader.get(index % len(self.loader), metadata)
 
 
 class BatchLoader(Loader[B]):

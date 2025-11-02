@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from timo.context import Context
-    from timo.out import Out
 
 from timo.named_axis import NamedAxisField
 from jax import Array
@@ -19,6 +18,7 @@ default_center_init = nnx.nn.initializers.lecun_normal()
 class Gaussian(Factory[Array, Array]):
     on: NamedAxisField
     to: int | None = None
+    exclusive: bool = False
 
     def create_transform(self, ctx: Context):
         from timo.sized_named_axis import size
@@ -31,12 +31,32 @@ class Gaussian(Factory[Array, Array]):
         center = ctx.params(self, "center", (in_size, to_size), default_center_init)
         scale = nnx.Param(jnp.stack([jnp.eye(in_size) for _ in range(to_size)], axis=-1))
         transform = gaussian
-        transform = nnx.vmap(transform, in_axes=(None, None, -1, -1), out_axes=-1)
-        transform = self.vmap(transform, (None,) * 3, self.on)
+        transform = nnx.vmap(transform, in_axes=(None, -1, -1), out_axes=-1)
+        if self.exclusive:
+            transform = exclusive(transform, to_size)
+        transform = self.vmap(transform, (None,) * 2, self.on)
         return Transform[Array, Array](transform, ctx, output_shape, data={"center": center, "scale": scale})
 
 
-def gaussian(inputs: Array, out: Out, center: nnx.Param[Array], scale: nnx.Param[Array]):
+def gaussian(inputs: Array, center: nnx.Param[Array], scale: nnx.Param[Array]):
     delta = inputs - center
     outputs = jnp.exp(-((delta.transpose() @ scale @ delta) ** 2))
     return outputs
+
+
+def exclusive(transform, to: int):
+    others = []
+    for i in range(to):
+        others.append(i_others := [])
+        for j in range(to):
+            if j != i:
+                i_others.append(j)
+    others = jnp.array(others)
+
+    def exclusive_transform(inputs: Array, center: nnx.Param[Array], scale: nnx.Param[Array]):
+        outputs = transform(inputs, center, scale)
+        other_outputs = outputs[others]
+        exclusion = jnp.prod(1 - other_outputs, -1)
+        return outputs * exclusion
+
+    return exclusive_transform

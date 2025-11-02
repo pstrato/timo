@@ -20,7 +20,7 @@ class Function(Factory[Array, Array]):
         return Transform[Array, Array](call, ctx, data=self.data, static={"function": self.function, **self.static})
 
 
-def call(inputs, data, function, **kwargs):
+def call(inputs, function, **kwargs):
     return function(inputs, **kwargs)
 
 

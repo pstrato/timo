@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
+import jax
+
 if TYPE_CHECKING:
     from typing import Callable
     from jax import Array
@@ -12,6 +14,9 @@ from timo.accumulator import Accumulator
 
 
 class Loss(nnx.Module):
+
+    def create_accumulator(self) -> Accumulator:
+        raise NotImplementedError()
 
     def __call__(self, out: Out, accumulator: Accumulator | None = None, weight: float = 1) -> Accumulator:
         raise NotImplementedError()
@@ -41,6 +46,9 @@ class WeightedLoss(Loss):
         self.loss = nnx.static(loss)
         self.weight = nnx.static(weight)
 
+    def create_accumulator(self) -> Accumulator:
+        return self.loss.create_accumulator()
+
     def __call__(self, out, accumulator=None, weight=1):
         return self.loss(out, accumulator=accumulator, weight=weight * self.weight)
 
@@ -49,10 +57,18 @@ class CombinedLoss(Loss):
     def __init__(self, *losses: Loss):
         super().__init__()
         self.losses = nnx.data(losses)
+        keys = set()
+        for loss in self.losses:
+            accumulator = loss.create_accumulator()
+            keys.update(accumulator.keys)
+        self.keys = keys
+
+    def create_accumulator(self) -> Accumulator:
+        return Accumulator(self.keys)
 
     def __call__(self, out, accumulator=None, weight=1):
         if accumulator is None:
-            accumulator = Accumulator()
+            accumulator = self.create_accumulator()
         for loss in self.losses:
             loss(out, accumulator, weight)
         return accumulator
@@ -62,19 +78,27 @@ class ProportionalLoss(Loss):
     def __init__(self, loss: Loss, *weighted_losses: tuple[Loss, float]):
         self.main = nnx.static(loss)
         self.weighted = nnx.static(weighted_losses)
+        keys = set()
+        for loss, _ in self.weighted:
+            accumulator = loss.create_accumulator()
+            keys.update(accumulator.keys)
+        self.keys = keys
+
+    def create_accumulator(self) -> Accumulator:
+        return Accumulator(self.keys)
 
     def __call__(self, out, accumulator=None, weight=1):
 
         if accumulator is None:
-            accumulator = Accumulator()
+            accumulator = self.create_accumulator()
 
-        main_accumulator = Accumulator()
+        main_accumulator = self.create_accumulator()
         self.main(out, main_accumulator, weight)
         accumulator.add_accumulator(main_accumulator)
 
         main_loss = main_accumulator.detached_mean()
         for weighted, weighted_weight in self.weighted:
-            weighted_accumulator = Accumulator()
+            weighted_accumulator = self.create_accumulator()
             weighted(out, weighted_accumulator, 1)
             weighted_loss = weighted_accumulator.detached_mean()
             weighted_scale = main_loss * weighted_weight / weighted_loss
@@ -96,9 +120,12 @@ class ValueLoss(Loss):
         self.function = nnx.static(function)
         self.key = nnx.static(key)
 
+    def create_accumulator(self) -> Accumulator:
+        return Accumulator({self.key})
+
     def __call__(self, out: Out, accumulator: Accumulator | None = None, weight: float = 1) -> Accumulator:
         if accumulator is None:
-            accumulator = Accumulator()
+            accumulator = self.create_accumulator()
         target = self.target(out)
         output = self.output(out)
         loss = self.function(target, output)
@@ -118,7 +145,7 @@ def outputs(out: Out):
     return out.outputs
 
 
-def data(key: str):
+def out(key: str):
     def value(out: Out):
         return getattr(out, key)
 
@@ -126,8 +153,11 @@ def data(key: str):
 
 
 def constant(constant: int | float | Array):
+    constant_array = jax.numpy.asarray(constant)
+    assert constant_array is not None
+
     def value(out: Out):
-        return constant
+        return constant_array
 
     return value
 

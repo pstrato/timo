@@ -5,7 +5,6 @@ from timo.transform import Transform
 
 if TYPE_CHECKING:
     from timo.context import Context
-    from timo.out import Out
 
 from timo.named_axis import NamedAxisField
 from jax import Array
@@ -29,5 +28,5 @@ class Sum(Factory[Array, Array]):
         return Transform(sum, ctx, output_shape, static={"dimension": dimension, "keepdim": self.keepdim})
 
 
-def sum(inputs: Array, out: Out, dimension: int, keepdim: bool):
+def sum(inputs: Array, dimension: int, keepdim: bool):
     return jnp.sum(inputs, axis=dimension, keepdims=keepdim)

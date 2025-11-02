@@ -4,14 +4,12 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from timo.named_shape import After, Before
     from timo.context import Context
-    from timo.out import Out
 
 from timo.named_axis import NamedAxisField
 from timo.factory import Factory
 from timo.transform import Transform
 from jax import Array
 from jax import numpy as jnp
-from flax import nnx
 
 
 class MoveAxis(Factory[Array, Array]):
@@ -29,5 +27,5 @@ class MoveAxis(Factory[Array, Array]):
         )
 
 
-def moveaxis(inputs: Array, out: Out, source: int, destination: int):
+def moveaxis(inputs: Array, source: int, destination: int):
     return jnp.moveaxis(inputs, source, destination)

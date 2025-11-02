@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from timo.context import Context
-    from timo.out import Out
 
 from timo.named_axis import NamedAxisField
 from jax import Array
@@ -25,5 +24,5 @@ class Softmax(Factory[Array, Array]):
         return Transform[Array, Array](softmax, ctx, static={"axis": axis})
 
 
-def softmax(inputs: Array, out: Out, axis):
+def softmax(inputs: Array, axis):
     return nnx.softmax(inputs, axis=axis)

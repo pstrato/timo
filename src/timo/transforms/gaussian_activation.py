@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from timo.context import Context
-    from timo.out import Out
 
 from timo.named_axis import NamedAxisField
 from jax import Array
@@ -27,13 +26,13 @@ class GaussianActivation(Factory[Array, Array]):
         center = ctx.params(self, "center", (in_size,), default_center_init)
         spread = ctx.params(self, "spread", (in_size,), default_spread_init)
         transform = gaussian
-        transform = self.vmap(transform, (None,) * 4, self.on)
+        transform = self.vmap(transform, (None,) * 3, self.on)
         return Transform[Array, Array](
             transform, ctx, data={"center": center, "spread": spread}, static={"eps": self.eps}
         )
 
 
-def gaussian(inputs: Array, out: Out, center: nnx.Param[Array], spread: nnx.Param[Array], eps: float):
+def gaussian(inputs: Array, center: nnx.Param[Array], spread: nnx.Param[Array], eps: float):
     delta = inputs - center
 
     outputs = jnp.exp(-(delta**2) / (spread**2 + eps))

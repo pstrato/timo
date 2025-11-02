@@ -3,11 +3,12 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from typing import Self
+    from timo.out import Out
 
 from flax import nnx
 
 
-class Batch(nnx.Module):
+class Batch(nnx.Pytree):
     def __init__(
         self,
         inputs=None,
@@ -16,10 +17,12 @@ class Batch(nnx.Module):
         epoch: int | None = None,
         index: int | None = None,
         load_time: float | None = None,
+        out: Out | None = None,
     ) -> None:
         super().__init__()
         self.inputs = nnx.data(inputs)
         self.targets = nnx.data(targets)
+        self.out = nnx.data(out)
         self.step = nnx.static(step)
         self.epoch = nnx.static(epoch)
         self.index = nnx.static(index)
@@ -31,12 +34,13 @@ class Batch(nnx.Module):
 
         inputs = data.get("inputs", self.inputs)
         targets = data.get("targets", self.targets)
+        out = data.get("out", self.out)
 
         step = metadata.get("step", self.step)
         epoch = metadata.get("epoch", self.epoch)
         index = metadata.get("index", self.index)
         load_time = metadata.get("load_time", self.load_time)
-        return Batch(inputs, targets, step, epoch, index, load_time)  # type: ignore
+        return Batch(inputs, targets, step, epoch, index, load_time, out)  # type: ignore
 
     @staticmethod
     def as_batch(

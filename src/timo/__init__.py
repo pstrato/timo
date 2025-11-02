@@ -5,7 +5,7 @@ from timo.named_shape_sequence import shapes, NamedShapeSequence
 from timo.factory import Factory
 from timo.context import Context
 from timo.transform import Transform
-from timo.observer import Observer, ref, detach, copy
+from timo.recorder import Recorder, ref, detach, copy
 from timo.loss import (
     ValueLoss,
     WeightedLoss,
@@ -14,7 +14,7 @@ from timo.loss import (
     inputs,
     targets,
     outputs,
-    data,
+    out,
     constant,
     rmse,
 )

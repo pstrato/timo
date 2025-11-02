@@ -1,4 +1,5 @@
 from __future__ import annotations
+from sre_constants import IN
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -6,9 +7,8 @@ if TYPE_CHECKING:
     from timo.named_axis import NamedAxis
     from timo.transform import Transform
     from timo.context import Context
-    from timo.observer import Observer
+    from timo.recorder import Recorder
 
-from timo.out import Out
 from pydantic import BaseModel, ConfigDict
 from typing import Generic, TypeVar
 
@@ -28,7 +28,7 @@ class Factory(BaseModel, Generic[I, O]):
         self._output_ctx: Context | None = None
 
     @property
-    def input_ctx(self):
+    def input_ctx(self) -> Context:
         if self._input_ctx is None:
             raise ValueError("Transform input context not set")
         return self._input_ctx
@@ -38,7 +38,7 @@ class Factory(BaseModel, Generic[I, O]):
         return self.input_ctx.input_shapes
 
     @property
-    def output_ctx(self):
+    def output_ctx(self) -> Context:
         if self._output_ctx is None:
             raise ValueError("Transform output context not set")
         return self._output_ctx
@@ -81,7 +81,7 @@ class Factory(BaseModel, Generic[I, O]):
 
         return Sequential(transforms=tuple(transforms))
 
-    def __add__(self, observer: Observer) -> Factory:
-        from timo.observer import ObserverFactory
+    def __add__(self, observer: Recorder) -> Factory:
+        from timo.recorder import RecorderFactory
 
-        return ObserverFactory[I, O](factory=self, observer=observer)
+        return RecorderFactory[I, O](factory=self, observer=observer)

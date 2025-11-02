@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from timo.context import Context
-    from timo.out import Out
 
 from timo.named_axis import NamedAxisField
 from jax import Array
@@ -30,11 +29,11 @@ class DynTanh(Factory[Array, Array]):
             bias = ctx.params(self, "bias", scale_size, default_bias_init)
         else:
             bias = None
-        transform = self.vmap(dyntanh, (None,) * 3, self.on)
+        transform = self.vmap(dyntanh, (None,) * 2, self.on)
         return Transform[Array, Array](transform, ctx, data={"scale": scale, "bias": bias})
 
 
-def dyntanh(inputs: Array, out: Out, scale: nnx.Param, bias: nnx.Param | None):
+def dyntanh(inputs: Array, scale: nnx.Param, bias: nnx.Param | None):
     outputs = inputs * scale
     if bias is None:
         return outputs

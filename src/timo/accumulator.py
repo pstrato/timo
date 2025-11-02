@@ -9,69 +9,57 @@ from timo.sum_count import SumCount
 from flax import nnx
 
 
-class Accumulator(nnx.Module):
-    def __init__(self, sum_counts: nnx.Dict | None = None):
+class Accumulator(nnx.Pytree):
+    def __init__(self, keys: set[str]):
         super().__init__()
-        self.sum_counts: nnx.Dict[SumCount] = nnx.Dict(sum_counts or {})
+        for key in keys:
+            setattr(self, key, nnx.data(SumCount()))
+        self.keys = nnx.static(keys)
 
     def __getitem__(self, key):
-        return self.sum_counts[key]
+        return getattr(self, key)
 
     def add_value(self, value: int | float | Array | None, key: str, weight: float | Array = 1):
         if value is None:
             return
-        try:
-            key_sum_count = self.sum_counts.get(key)
-        except AttributeError:
-            key_sum_count = None
-
-        if key_sum_count is None:
-            self.sum_counts[key] = SumCount().add_value(value, weight)
-        else:
-            key_sum_count.add_value(value)
+        key_sum_count: SumCount = getattr(self, key)
+        key_sum_count.add_value(value, weight)
         return self
 
     def add_sum_count(self, sum_count: SumCount, key, weight: float | Array = 1):
-        try:
-            key_sum_count = self.sum_counts.get(key)
-        except AttributeError:
-            key_sum_count = None
-
-        if key_sum_count is None:
-            self.sum_counts[key] = SumCount().add_sum_count(sum_count, weight=weight)
-        else:
-            key_sum_count.add_sum_count(sum_count, weight=weight)
+        key_sum_count: SumCount = getattr(self, key)
+        key_sum_count.add_sum_count(sum_count, weight=weight)
         return self
 
     def add_accumulator(self, accumulator: Accumulator, weight: float | Array = 1):
-        for key, key_sum_count in accumulator.sum_counts.items():
-            self.add_sum_count(key_sum_count, key, weight=weight)
+        for key in accumulator.keys:
+            self.add_sum_count(getattr(accumulator, key), key, weight=weight)
         return self
 
     def mean(self):
         sum_count = SumCount()
-        for key, key_sum_count in self.sum_counts.items():
-            sum_count.add_sum_count(key_sum_count)
+        for key in self.keys:
+            sum_count.add_sum_count(getattr(self, key))
         return sum_count.mean()
 
     def sum(self):
         sum_count = SumCount()
-        for key, key_sum_count in self.sum_counts.items():
-            sum_count.add_sum_count(key_sum_count)
+        for key in self.keys:
+            sum_count.add_sum_count(getattr(self, key))
         return sum_count.sum
 
     def means(self):
-        for key, key_sum_count in self.sum_counts.items():
-            yield key, key_sum_count.mean()
+        for key in self.keys:
+            yield key, getattr(self, key).mean()
 
     def sums(self):
-        for key, key_sum_count in self.sum_counts.items():
-            yield key, float(key_sum_count.sum)  # type: ignore
+        for key in self.keys:
+            yield key, float(getattr(self, key).sum)  # type: ignore
 
     def detached_mean(self):
         sum_count = SumCount()
-        for key, key_sum_count in self.sum_counts.items():
-            sum_count.detached_add_sum_count(key_sum_count)
+        for key in self.keys:
+            sum_count.detached_add_sum_count(getattr(self, key))
         return sum_count.mean()
 
     @contextmanager

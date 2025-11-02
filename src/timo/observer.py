@@ -1,76 +1,105 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
+
+from timo.batch import Batch
+from timo.fit import Epoch
 
 if TYPE_CHECKING:
-    from timo.context import Context
-    from timo.transform import Transform
-    from timo.out import Out
+    from timo.session import Session
+    from typing import Iterable
 
-from timo.factory import Factory
-from timo.transform import Transform, I, O
-from jax.lax import stop_gradient
-from flax.nnx import Dict
-
-
-def ref(key: str, on_train: bool = True, on_eval: bool = True):
-    return Observer(reference_outputs, on_train, on_eval, key)
-
-
-def detach(key, on_train: bool = True, on_eval: bool = True):
-    return Observer(detach_outputs, on_train, on_eval, key)
-
-
-def copy(key, on_train: bool = True, on_eval: bool = True):
-    return Observer(copy_outputs, on_train, on_eval, key)
-
-
-def reference_outputs(inputs, out: Out, observed: Transform, key: str, on_train: bool, on_eval: bool):
-    outputs = observed(inputs, out)
-    training = observed.training
-    if on_train and training or (not training and on_eval):
-        setattr(out, key, outputs)
-    return outputs
-
-
-def detach_outputs(inputs, out: Out, observed: Transform, key: str, on_train: bool, on_eval: bool):
-    outputs = observed(inputs, out)
-    training = observed.training
-    if (on_train and training) or (not training and on_eval):
-        setattr(out, key, observed(stop_gradient(inputs), out))
-    return outputs
-
-
-def copy_outputs(inputs, out: Out, observed: Transform, key: str, on_train: bool, on_eval: bool):
-    outputs = observed(inputs, out)
-    training = observed.training
-    if (on_train and training) or (not training and on_eval):
-        setattr(out, key, observed(inputs, out))
-    return outputs
+from timo.fit import Epoch
+from timo.batch import Batch
+import tensorboardX
 
 
 class Observer:
-    def __init__(self, action, on_train: bool, on_eval: bool, key):
-        self.on_train = on_train
-        self.on_eval = on_eval
-        self.action = action
-        self.key = key
+
+    def observe(self, training: Iterable[Batch | Epoch]) -> Iterable[Batch | Epoch]:
+        for item in training:
+            if isinstance(item, Epoch):
+                self.add_step_epoch(item)
+            elif isinstance(item, Batch):
+                self.add_step_batch(item)
+            yield item
+
+    def add_step_epoch(self, epoch: Epoch):
+        pass
+
+    def add_step_batch(self, batch: Batch):
+        pass
 
 
-class ObserverFactory(Factory[I, O]):
-    factory: Factory[I, O]
-    observer: Observer
+class PeriodicObserver(Observer):
+    def __init__(self, observer: Observer, epoch_period: int | None, batch_period: int | None) -> None:
+        super().__init__()
+        self.observer = observer
+        self.epoch_period = epoch_period
+        self.batch_period = batch_period
 
-    def create_transform(self, ctx: Context):
-        observed = self.factory.transform(ctx)
-        action = self.observer.action
-        on_train = self.observer.on_train
-        on_eval = self.observer.on_eval
-        key = self.observer.key
-        ctx.add_out(key)
-        return Transform(
-            action,
-            ctx,
-            observed.output_shapes,
-            data={"observed": observed},
-            static={"key": key, "on_train": on_train, "on_eval": on_eval},
-        )
+        self.last_epoch: int | None = None
+        self.last_batch: int | None = None
+
+    def add_step_epoch(self, epoch: Epoch):
+        super().add_step_epoch(epoch)
+        if self.last_epoch is None:
+            self.last_epoch = epoch.epoch
+        if epoch.epoch - self.last_epoch >= (self.epoch_period or 0):
+            self.last_epoch = epoch.epoch
+
+        if self.last_epoch == epoch.epoch:
+            self.observer.add_step_epoch(epoch)
+
+    def add_step_batch(self, batch: Batch):
+        super().add_step_batch(batch)
+        batch_epoch = batch.epoch
+        if batch_epoch != self.last_epoch:
+            return
+        if self.last_batch is None:
+            self.last_batch = batch.index
+        if batch.index - self.last_batch >= (self.batch_period or 0):
+            self.last_batch = batch.index
+
+        if self.last_batch == batch.index:
+            self.observer.add_step_batch(batch)
+
+
+class MultiObsever(Observer):
+    def __init__(self, *observers: Observer) -> None:
+        super().__init__()
+        self.observers = observers
+
+    def add_step_batch(self, batch: Batch):
+        super().add_step_batch(batch)
+        for observer in self.observers:
+            observer.add_step_batch(batch)
+
+    def add_step_epoch(self, epoch: Epoch):
+        super().add_step_epoch(epoch)
+        for observer in self.observers:
+            observer.add_step_epoch(epoch)
+
+
+class NoObserver(Observer):
+    def observe(self, training: Iterable[Batch | Epoch]):
+        return training
+
+
+class TensorboardObserver(Observer):
+    def __init__(self, session: Session, output: str) -> None:
+        super().__init__()
+        self.writer = tensorboardX.SummaryWriter(session.output_path("fitting", output))
+
+
+class TensorboardLossObserver(TensorboardObserver):
+    def __init__(self, session: Session):
+        super().__init__(session, "losses")
+
+    def add_step_epoch(self, epoch: Epoch):
+        for loss, value in epoch.losses.means():
+            self.writer.add_scalar(f"{loss}/{epoch.step}", value, epoch.epoch)
+
+
+class EpochPrintObserver(Observer):
+    def add_step_epoch(self, epoch: Epoch):
+        print(epoch)

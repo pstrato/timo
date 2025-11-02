@@ -7,14 +7,12 @@ if TYPE_CHECKING:
     from timo.named_axis import NamedAxis
     from timo.named_shape import NamedShape
     from timo.context import Context
-    from timo.out import Out
 
 from timo.context import Context
 from timo.named_axis import NamedAxisField
 from jax import Array
 from timo.factory import Factory
-from jax.numpy import concatenate
-from flax import nnx
+from jax.lax import concatenate
 
 
 def concat_shape(on: str | NamedAxis, *shapes: NamedShape):
@@ -47,5 +45,5 @@ class Concat(Factory[tuple[Array, Array], Array]):
         return Transform(concat, ctx, output_shape, static={"dimension": dimension})
 
 
-def concat(inputs: tuple[Array, Array], out: Out, dimension: int):
+def concat(inputs: tuple[Array, Array], dimension: int):
     return concatenate(inputs, dimension)

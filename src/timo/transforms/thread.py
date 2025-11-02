@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from timo.context import Context
-    from timo.out import Out
 
 from timo.named_axis import NamedAxisField
 from jax import Array
@@ -17,7 +16,6 @@ class Thread(Factory[Array, Array]):
     on: NamedAxisField
 
     def create_transform(self, ctx: Context):
-        from timo.sized_named_axis import size
         from timo.transforms.concat import concat_shape
 
         if len(self.transforms) == 0:
@@ -40,8 +38,5 @@ class Thread(Factory[Array, Array]):
         )
 
 
-def thread(inputs: Array, out: Out, transforms: tuple[Transform, ...], dimension: int):
-    outputs = []
-    for transform in transforms:
-        outputs.append(transform(inputs, out))
-    return concatenate(outputs, dimension=dimension)
+def thread(inputs: Array, transforms: tuple[Transform, ...], dimension: int):
+    return concatenate(tuple(transform(inputs) for transform in transforms), dimension=dimension)

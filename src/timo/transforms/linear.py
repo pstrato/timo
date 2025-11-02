@@ -34,11 +34,11 @@ class Linear(Factory[Array, Array]):
             bias = ctx.params(self, "bias", to_size, default_bias_init)
         else:
             bias = None
-        transform = self.vmap(linear, (None,) * 3, self.on)
+        transform = self.vmap(linear, (None,) * 2, self.on)
         return Transform[Array, Array](transform, ctx, output_shape, data={"kernel": kernel, "bias": bias})
 
 
-def linear(inputs: Array, Dict, kernel: nnx.Param, bias: nnx.Param | None):
+def linear(inputs: Array, kernel: nnx.Param, bias: nnx.Param | None):
     outputs = inputs @ kernel
     if bias is None:
         return outputs

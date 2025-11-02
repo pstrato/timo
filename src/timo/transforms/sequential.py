@@ -3,12 +3,12 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from timo.context import Context
-    from timo.out import Out
 
 from jax import Array
-from flax import nnx
 from timo.factory import Factory
 from timo.transform import Transform
+
+from flax.nnx import Sequential as SequentialNNX
 
 
 class Sequential(Factory[Array, Array]):
@@ -22,11 +22,9 @@ class Sequential(Factory[Array, Array]):
             module = transform.transform(output_ctx)
             modules.append(module)
             output_ctx = module.output_ctx
-        return Transform[Array, Array](sequential, ctx, output_ctx.input_shapes, data={"transforms": modules})
+        sequential_nnx = SequentialNNX(*modules)
+        return Transform[Array, Array](sequential, ctx, output_ctx.input_shapes, data={"transforms": sequential_nnx})
 
 
-def sequential(inputs: Array, out: Out, transforms: tuple[Transform, ...]):
-    outputs = inputs
-    for transform in transforms:
-        outputs = transform(outputs, out)
-    return outputs
+def sequential(inputs: Array, transforms: SequentialNNX):
+    return transforms(inputs)

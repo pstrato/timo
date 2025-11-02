@@ -31,11 +31,15 @@ class Transform(nnx.Module, Generic[I, O]):
 
         nnx.Module.__init__(self)
         self.transform = nnx.static(transform)
-        self.training = True
         self.data = nnx.data(data)
-        self.input_ctx = nnx.data(ctx)
-        self.output_ctx = nnx.data(Context(ctx, input_shapes=shapes(output_shapes or ctx.input_shapes)))
+        self.input_ctx = nnx.static(ctx)
+        self.output_ctx = nnx.static(Context(ctx, input_shapes=shapes(output_shapes or ctx.input_shapes)))
         self.static = nnx.static(static)
+        self.training = True
+        self.out = nnx.data(None)
+
+    def set_out(self, out: Out | None):
+        self.set_attributes(out=out, raise_if_not_found=False)
 
     @property
     def input_shapes(self):
@@ -51,8 +55,8 @@ class Transform(nnx.Module, Generic[I, O]):
     def eval(self, **attributes):
         return super().eval(**attributes, training=False)
 
-    def __call__(self, inputs: I, out: Out | None = None) -> O:
-        return self.transform(inputs, out, **self.static, **self.data)
+    def __call__(self, inputs: I) -> O:
+        return self.transform(inputs, **self.static, **self.data)
 
     def create_out(self) -> Out:
         outs = self.input_ctx.out_keys
