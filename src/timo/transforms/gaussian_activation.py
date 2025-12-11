@@ -28,7 +28,7 @@ class GaussianActivation(Factory[Array, Array]):
         transform = gaussian
         transform = self.vmap(transform, (None,) * 3, self.on)
         return Transform[Array, Array](
-            transform, ctx, data={"center": center, "spread": spread}, static={"eps": self.eps}
+            transform, ctx, self, data={"center": center, "spread": spread}, static={"eps": self.eps}
         )
 
 

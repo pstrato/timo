@@ -23,7 +23,7 @@ class MoveAxis(Factory[Array, Array]):
         source = self.input_shapes.single_shape().indexof(self.axis)
         destination = self.output_shapes.single_shape().indexof(self.axis)
         return Transform[Array, Array](
-            moveaxis, ctx, output_shape, static={"source": source, "destination": destination}
+            moveaxis, ctx, self, output_shape, static={"source": source, "destination": destination}
         )
 
 

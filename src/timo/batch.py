@@ -62,4 +62,11 @@ def as_list(values):
 def stack(values):
     from jax.numpy import stack
 
-    return stack(list(values))
+    values = list(values)
+
+    if all(map(lambda v: v is None, values)):
+        return None
+    if len(values) == 0:
+        return None
+
+    return stack(values)

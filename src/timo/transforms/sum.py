@@ -25,7 +25,7 @@ class Sum(Factory[Array, Array]):
             output_shape = input_shape.resize(size(self.on, 1))
         else:
             output_shape = input_shape.remove(self.on)
-        return Transform(sum, ctx, output_shape, static={"dimension": dimension, "keepdim": self.keepdim})
+        return Transform(sum, ctx, self, output_shape, static={"dimension": dimension, "keepdim": self.keepdim})
 
 
 def sum(inputs: Array, dimension: int, keepdim: bool):

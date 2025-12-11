@@ -42,6 +42,12 @@ class Accumulator(nnx.Pytree):
             sum_count.add_sum_count(getattr(self, key))
         return sum_count.mean()
 
+    def loss(self):
+        sum_count = SumCount()
+        for key in self.keys:
+            sum_count.add_value(getattr(self, key).mean())
+        return sum_count.mean()
+
     def sum(self):
         sum_count = SumCount()
         for key in self.keys:

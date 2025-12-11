@@ -12,7 +12,7 @@ from timo.transform import Transform
 
 class StopGradient(Factory[Array, Array]):
     def create_transform(self, ctx: Context):
-        return Transform[Array, Array](transform, ctx)
+        return Transform[Array, Array](transform, ctx, self)
 
 
 def transform(input: Array):

@@ -42,8 +42,8 @@ class Concat(Factory[tuple[Array, Array], Array]):
 
     def create_transform(self, ctx: Context) -> Transform:
         dimension, output_shape = concat_shape(self.on, *ctx.input_shapes)
-        return Transform(concat, ctx, output_shape, static={"dimension": dimension})
+        return Transform(concat, ctx, self, output_shape, static={"dimension": dimension})
 
 
-def concat(inputs: tuple[Array, Array], dimension: int):
+def concat(inputs: tuple[Array, ...], dimension: int):
     return concatenate(inputs, dimension)

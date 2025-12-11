@@ -1,5 +1,4 @@
 from __future__ import annotations
-from sre_constants import IN
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -19,7 +18,7 @@ from flax.nnx import vmap
 
 
 class Factory(BaseModel, Generic[I, O]):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, revalidate_instances="never")
 
     def __init__(self, **data):
         Generic.__init__(self)

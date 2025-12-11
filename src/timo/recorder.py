@@ -68,6 +68,7 @@ class RecorderFactory(Factory[I, O]):
         return Transform(
             action,
             ctx,
+            self,
             observed.output_shapes,
             data={"observed": observed},
             static={"key": key, "on_train": on_train, "on_eval": on_eval},

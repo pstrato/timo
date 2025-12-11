@@ -6,6 +6,7 @@ if TYPE_CHECKING:
     from timo.named_shape import NamedShape
     from timo.named_shape_sequence import NamedShapeSequence
     from timo.context import Context
+    from timo.factory import Factory
 
 from timo.out import Out
 
@@ -22,19 +23,30 @@ class Transform(nnx.Module, Generic[I, O]):
         self,
         transform: Callable,
         ctx: Context,
+        factory: Factory,
         output_shapes: NamedShape | NamedShapeSequence | None = None,
         data: dict[str, Any] = {},
         static: dict[str, Any] = {},
+        with_out: bool = False,
     ):
         from timo.named_shape_sequence import shapes
         from timo.context import Context
 
         nnx.Module.__init__(self)
         self.transform = nnx.static(transform)
-        self.data = nnx.data(data)
+        self.factory = nnx.static(factory)
+        self.with_out = nnx.static(with_out)
         self.input_ctx = nnx.static(ctx)
         self.output_ctx = nnx.static(Context(ctx, input_shapes=shapes(output_shapes or ctx.input_shapes)))
-        self.static = nnx.static(static)
+        self.args = []
+        for arg, value in data.items():
+            setattr(self, arg, nnx.data(value))
+            self.args.append(arg)
+        for arg, value in static.items():
+            setattr(self, arg, nnx.static(value))
+            self.args.append(arg)
+        if with_out:
+            self.args.append("out")
         self.training = True
         self.out = nnx.data(None)
 
@@ -56,7 +68,8 @@ class Transform(nnx.Module, Generic[I, O]):
         return super().eval(**attributes, training=False)
 
     def __call__(self, inputs: I) -> O:
-        return self.transform(inputs, **self.static, **self.data)
+        args = {arg: getattr(self, arg) for arg in self.args}
+        return self.transform(inputs, **args)
 
     def create_out(self) -> Out:
         outs = self.input_ctx.out_keys

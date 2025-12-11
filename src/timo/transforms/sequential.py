@@ -23,7 +23,9 @@ class Sequential(Factory[Array, Array]):
             modules.append(module)
             output_ctx = module.output_ctx
         sequential_nnx = SequentialNNX(*modules)
-        return Transform[Array, Array](sequential, ctx, output_ctx.input_shapes, data={"transforms": sequential_nnx})
+        return Transform[Array, Array](
+            sequential, ctx, self, output_ctx.input_shapes, data={"transforms": sequential_nnx}
+        )
 
 
 def sequential(inputs: Array, transforms: SequentialNNX):

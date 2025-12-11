@@ -56,8 +56,8 @@ class PeriodicObserver(Observer):
         if batch_epoch != self.last_epoch:
             return
         if self.last_batch is None:
-            self.last_batch = batch.index
-        if batch.index - self.last_batch >= (self.batch_period or 0):
+            self.last_batch = batch.index or 0
+        if (batch.index or 0) - self.last_batch >= (self.batch_period or 0):
             self.last_batch = batch.index
 
         if self.last_batch == batch.index:
@@ -88,7 +88,7 @@ class NoObserver(Observer):
 class TensorboardObserver(Observer):
     def __init__(self, session: Session, output: str) -> None:
         super().__init__()
-        self.writer = tensorboardX.SummaryWriter(session.output_path("fitting", output))
+        self.writer = tensorboardX.SummaryWriter(session.output_path("fitting", output), flush_secs=5)
 
 
 class TensorboardLossObserver(TensorboardObserver):
@@ -98,6 +98,7 @@ class TensorboardLossObserver(TensorboardObserver):
     def add_step_epoch(self, epoch: Epoch):
         for loss, value in epoch.losses.means():
             self.writer.add_scalar(f"{loss}/{epoch.step}", value, epoch.epoch)
+        self.writer.add_scalar(f"loss/{epoch.step}", epoch.losses.loss(), epoch.epoch)
 
 
 class EpochPrintObserver(Observer):

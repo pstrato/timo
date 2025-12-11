@@ -18,7 +18,9 @@ import orbax
 class Keeper:
     def __init__(self):
         self.best_train: Epoch | None = None
+        self.last_train: Epoch | None = None
         self.best_eval: Epoch | None = None
+        self.last_eval: Epoch | None = None
 
     def keep(self, training: Iterable[Batch | Epoch]):
         for epoch in training:
@@ -40,9 +42,15 @@ class Keeper:
         if self.best_train is not None:
             output_path = os.path.abspath(f"{path}/best_train/")
             checkpointer.save(output_path, self.best_train.state)
+        if self.last_train is not None:
+            output_path = os.path.abspath(f"{path}/last_train/")
+            checkpointer.save(output_path, self.last_train.state)
         if self.best_eval is not None:
             output_path = os.path.abspath(f"{path}/best_eval/")
             checkpointer.save(output_path, self.best_eval.state)
+        if self.last_eval is not None:
+            output_path = os.path.abspath(f"{path}/last_eval/")
+            checkpointer.save(output_path, self.last_eval.state)
         checkpointer.wait_until_finished()
 
     def load_best_eval(self, path: str):

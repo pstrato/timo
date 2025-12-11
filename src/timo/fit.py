@@ -51,7 +51,7 @@ class StopAfterEpoch(StopCondition):
 
 
 @nnx.jit
-def eval_batch(step_graph, step_state, inputs: Array | None, targets: Array | None):
+def eval_batch(step_graph, step_state, inputs: Array | None, targets: Array | None, rngs: nnx.Rngs):
     transform, optimiser, loss = nnx.merge(step_graph, step_state)
     out = transform.create_out()
     out.inputs = inputs
@@ -60,14 +60,14 @@ def eval_batch(step_graph, step_state, inputs: Array | None, targets: Array | No
     outputs = transform(inputs)
     transform.set_out(None)
     out.outputs = outputs
-    accumulator = loss(out)
+    accumulator = loss(transform, out, rngs)
     return accumulator, out
 
 
 @nnx.jit
-def train_batch(step_graph, step_state, inputs: Array | None, targets: Array | None):
+def train_batch(step_graph, step_state, inputs: Array | None, targets: Array | None, rngs: nnx.Rngs):
 
-    def loss_fn(transform: Transform, loss: Loss):
+    def loss_fn(transform: Transform, loss: Loss, rngs: nnx.Rngs):
         out = transform.create_out()
         out.inputs = inputs
         out.targets = targets
@@ -75,12 +75,12 @@ def train_batch(step_graph, step_state, inputs: Array | None, targets: Array | N
         outputs = transform(inputs)
         transform.set_out(None)
         out.outputs = outputs
-        accumulator = loss(out)
-        return accumulator.mean(), (accumulator, out)
+        accumulator = loss(transform, out, rngs)
+        return accumulator.loss(), (accumulator, out)
 
     transform, optimizer, loss = nnx.merge(step_graph, step_state)
 
-    (loss_value, (accumulator, out)), grad = nnx.value_and_grad(loss_fn, has_aux=True)(transform, loss)
+    (loss_value, (accumulator, out)), grad = nnx.value_and_grad(loss_fn, has_aux=True)(transform, loss, rngs)
 
     optimizer.update(transform, grad)
 
@@ -101,6 +101,8 @@ def fit(
 
     epoch = 0
     stop = False
+    rngs = nnx.Rngs(sample=20251115)
+
     while not stop:
         epoch += 1
 
@@ -112,7 +114,7 @@ def fit(
                 with train_times.timer("batch compute time"):
                     with batch_profiler.profile("train") as profiling:
                         step_state, batch_losses, batch_out = train_batch(
-                            step_graph, step_state, batch.inputs, batch.targets
+                            step_graph, step_state, batch.inputs, batch.targets, rngs
                         )
                 yield batch.clone(data={"out": batch_out})
                 train_losses.add_accumulator(batch_losses)
@@ -126,7 +128,7 @@ def fit(
             for batch in eval.batches({"step": "eval", "epoch": epoch}):
                 with eval_times.timer("batch compute time"):
                     with batch_profiler.profile("eval") as profiling:
-                        batch_losses, batch_out = eval_batch(step_graph, step_state, batch.inputs, batch.targets)
+                        batch_losses, batch_out = eval_batch(step_graph, step_state, batch.inputs, batch.targets, rngs)
                 yield batch.clone(data={"out": batch_out})
                 eval_losses.add_accumulator(batch_losses)
                 eval_times.add_value(batch.load_time, "batch load time")

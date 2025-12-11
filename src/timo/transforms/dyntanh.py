@@ -30,7 +30,7 @@ class DynTanh(Factory[Array, Array]):
         else:
             bias = None
         transform = self.vmap(dyntanh, (None,) * 2, self.on)
-        return Transform[Array, Array](transform, ctx, data={"scale": scale, "bias": bias})
+        return Transform[Array, Array](transform, ctx, self, data={"scale": scale, "bias": bias})
 
 
 def dyntanh(inputs: Array, scale: nnx.Param, bias: nnx.Param | None):

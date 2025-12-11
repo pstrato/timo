@@ -97,8 +97,25 @@ class RepeatLoader(Loader[B]):
         return self.loader.get(index % len(self.loader), metadata)
 
 
+class SequenceLoader(Loader[B]):
+    def __init__(self, *loaders: Loader[B]):
+        self.loaders = loaders
+
+    def __len__(self):
+        return sum(map(lambda loader: len(loader), self.loaders))
+
+    def get(self, index: int, metadata: dict | None = None) -> B:
+        for loader in self.loaders:
+            loader_size = len(loader)
+            if index >= loader_size:
+                index -= loader_size
+                continue
+            return loader.get(index)
+        raise IndexError(index)
+
+
 class BatchLoader(Loader[B]):
-    def __init__(self, loader: Loader[B], size: int):
+    def __init__(self, loader: Loader[B], size: int | None):
         super().__init__()
         self._loader = loader
         self._size = size
@@ -106,21 +123,31 @@ class BatchLoader(Loader[B]):
     def __len__(self):
         import math
 
-        return int(math.ceil(len(self._loader) / self._size))
+        if self._size is not None:
+            return int(math.ceil(len(self._loader) / self._size))
+        return 1
 
     def get(self, index: int, metadata=None):
 
         start = monotonic()
         items = []
         batch_type: type[B] | None = None
-        for i in range(self._size):
-            if i >= len(self._loader):
-                break
-            item = self._loader.get(index + i)
-            if item is None:
-                continue
-            batch_type: type[B] | None = type(item)
-            items.append(item)
+        if self._size is not None:
+            for i in range(self._size):
+                if i >= len(self._loader):
+                    break
+                item = self._loader.get(index + i)
+                if item is None:
+                    continue
+                batch_type: type[B] | None = type(item)
+                items.append(item)
+        else:
+            for i in range(len(self._loader)):
+                item = self._loader.get(i)
+                if item is None:
+                    continue
+                batch_type: type[B] | None = type(item)
+                items.append(item)
 
         if batch_type is None:
             raise RuntimeError("Empty batch")

@@ -35,7 +35,7 @@ class Linear(Factory[Array, Array]):
         else:
             bias = None
         transform = self.vmap(linear, (None,) * 2, self.on)
-        return Transform[Array, Array](transform, ctx, output_shape, data={"kernel": kernel, "bias": bias})
+        return Transform[Array, Array](transform, ctx, self, output_shape, data={"kernel": kernel, "bias": bias})
 
 
 def linear(inputs: Array, kernel: nnx.Param, bias: nnx.Param | None):

@@ -34,7 +34,7 @@ class Thread(Factory[Array, Array]):
         dimension, output_shape = concat_shape(self.on, *shapes)
 
         return Transform[Array, Array](
-            thread, ctx, output_shape, data={"transforms": modules}, static={"dimension": dimension}
+            thread, ctx, self, output_shape, data={"transforms": modules}, static={"dimension": dimension}
         )
 
 

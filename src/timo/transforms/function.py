@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 
 from typing import Callable
 from jax import Array
-from flax.nnx import relu, leaky_relu, sigmoid
+from flax.nnx import relu, leaky_relu, sigmoid, tanh
 from timo.transform import Transform
 
 
@@ -17,7 +17,9 @@ class Function(Factory[Array, Array]):
     static: dict = {}
 
     def create_transform(self, ctx: Context):
-        return Transform[Array, Array](call, ctx, data=self.data, static={"function": self.function, **self.static})
+        return Transform[Array, Array](
+            call, ctx, self, data=self.data, static={"function": self.function, **self.static}
+        )
 
 
 def call(inputs, function, **kwargs):
@@ -46,3 +48,8 @@ class LeakyReLU(Function):
 class Sigmoid(Function):
     def __init__(self):
         super().__init__(function=sigmoid)
+
+
+class TanH(Function):
+    def __init__(self):
+        super().__init__(function=tanh)
