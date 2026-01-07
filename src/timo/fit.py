@@ -16,12 +16,13 @@ from timo.loader import B
 
 
 class Epoch:
-    def __init__(self, step: str, epoch: int, times: Accumulator, losses: Accumulator, state):
+    def __init__(self, step: str, epoch: int, times: Accumulator, losses: Accumulator, state, model: Transform):
         self.step = step
         self.epoch = epoch
         self.times = times
         self.losses = losses
         self.state = state
+        self.model = model
 
     def mean_summary(self):
         return " ".join(map(lambda m: f"{m[0]}:{float(m[1])}", self.losses.means()))
@@ -116,11 +117,11 @@ def fit(
                         step_state, batch_losses, batch_out = train_batch(
                             step_graph, step_state, batch.inputs, batch.targets, rngs
                         )
-                yield batch.clone(data={"out": batch_out})
+                yield batch.clone(data={"out": batch_out, "model": transform})
                 train_losses.add_accumulator(batch_losses)
                 train_times.add_value(batch.load_time, "batch load time")
 
-        yield (train_epoch := Epoch("train", epoch, train_times, train_losses, step_state[0]))
+        yield (train_epoch := Epoch("train", epoch, train_times, train_losses, step_state[0], transform))
 
         eval_times = Accumulator({"epoch time", "batch compute time", "batch load time"})
         with eval_times.timer("epoch time"):
@@ -129,10 +130,10 @@ def fit(
                 with eval_times.timer("batch compute time"):
                     with batch_profiler.profile("eval") as profiling:
                         batch_losses, batch_out = eval_batch(step_graph, step_state, batch.inputs, batch.targets, rngs)
-                yield batch.clone(data={"out": batch_out})
+                yield batch.clone(data={"out": batch_out, "model": transform})
                 eval_losses.add_accumulator(batch_losses)
                 eval_times.add_value(batch.load_time, "batch load time")
-        yield (eval_epoch := Epoch("eval", epoch, eval_times, eval_losses, step_state[0]))
+        yield (eval_epoch := Epoch("eval", epoch, eval_times, eval_losses, step_state[0], transform))
 
         stop = stop_condition(train_epoch, eval_epoch)
 

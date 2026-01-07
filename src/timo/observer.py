@@ -1,8 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Iterable
 
-from timo.batch import Batch
-from timo.fit import Epoch
+import numpy as np
 
 if TYPE_CHECKING:
     from timo.session import Session
@@ -11,6 +10,7 @@ if TYPE_CHECKING:
 from timo.fit import Epoch
 from timo.batch import Batch
 import tensorboardX
+from flax import nnx
 
 
 class Observer:
@@ -104,3 +104,19 @@ class TensorboardLossObserver(TensorboardObserver):
 class EpochPrintObserver(Observer):
     def add_step_epoch(self, epoch: Epoch):
         print(epoch)
+
+
+class TensorboardParamObserver(TensorboardObserver):
+    def __init__(self, session: Session) -> None:
+        super().__init__(session, "params")
+
+    def add_step_epoch(self, epoch: Epoch):
+        if epoch.step != "eval":
+            return
+        transform = epoch.model
+        for path, module in transform.iter_modules():
+            state = nnx.state(module)
+            for name, param in state.items():
+                if not isinstance(param, nnx.Param):
+                    continue
+                self.writer.add_histogram(f"params/{path}/{name}", np.array(param), epoch.epoch)

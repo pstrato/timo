@@ -20,6 +20,8 @@ class Linear(Factory[Array, Array]):
     on: NamedAxisField
     to: int | None = None
     bias: bool = True
+    kernel_init: nnx.Initializer = default_kernel_init
+    bias_init: nnx.Initializer = default_bias_init
 
     def create_transform(self, ctx: Context):
         from timo.sized_named_axis import size
@@ -29,9 +31,9 @@ class Linear(Factory[Array, Array]):
         input_shape = ctx.input_shapes.single_shape()
         output_shape = input_shape.resize(size(self.on, to_size))
 
-        kernel = ctx.params(self, "kernel", (in_size, to_size), default_kernel_init)
+        kernel = ctx.params(self, "kernel", (in_size, to_size), self.kernel_init)
         if self.bias:
-            bias = ctx.params(self, "bias", to_size, default_bias_init)
+            bias = ctx.params(self, "bias", to_size, self.bias_init)
         else:
             bias = None
         transform = self.vmap(linear, (None,) * 2, self.on)

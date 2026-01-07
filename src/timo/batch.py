@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Self
     from timo.out import Out
+    from timo.transform import Transform
 
 from flax import nnx
 
@@ -18,6 +19,7 @@ class Batch(nnx.Pytree):
         index: int | None = None,
         load_time: float | None = None,
         out: Out | None = None,
+        model: Transform | None = None,
     ) -> None:
         super().__init__()
         self.inputs = nnx.data(inputs)
@@ -27,6 +29,7 @@ class Batch(nnx.Pytree):
         self.epoch = nnx.static(epoch)
         self.index = nnx.static(index)
         self.load_time = nnx.static(load_time)
+        self.model = nnx.data(model)
 
     def clone(self, data: dict | None = None, metadata: dict | None = None) -> Self:
         data = data or {}
@@ -35,12 +38,13 @@ class Batch(nnx.Pytree):
         inputs = data.get("inputs", self.inputs)
         targets = data.get("targets", self.targets)
         out = data.get("out", self.out)
+        model = data.get("model", self.model)
 
         step = metadata.get("step", self.step)
         epoch = metadata.get("epoch", self.epoch)
         index = metadata.get("index", self.index)
         load_time = metadata.get("load_time", self.load_time)
-        return Batch(inputs, targets, step, epoch, index, load_time, out)  # type: ignore
+        return Batch(inputs, targets, step, epoch, index, load_time, out, model)  # type: ignore
 
     @staticmethod
     def as_batch(
@@ -51,7 +55,14 @@ class Batch(nnx.Pytree):
         load_time: float | None = None,
     ):
         return Batch(
-            stack(map(lambda i: i.inputs, items)), stack(map(lambda i: i.targets, items)), step, epoch, index, load_time
+            stack(map(lambda i: i.inputs, items)),
+            stack(map(lambda i: i.targets, items)),
+            step,
+            epoch,
+            index,
+            load_time,
+            None,
+            None,
         )
 
 

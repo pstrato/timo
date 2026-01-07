@@ -37,7 +37,7 @@ def s3(distance) -> PatchCoordinates:
         coordinates.append(((+distance, -distance), (+distance, -distance + 1), (+distance - 1, -distance)))
         coordinates.append(((+distance, +distance), (+distance, +distance - 1), (+distance - 1, +distance)))
 
-        for i in range(-distance + 1, +distance, 2):
+        for i in range(-distance + 2, +distance - 1, 2):
 
             coordinates.append(((i - 1, -distance), (i, -distance), (i + 1, -distance)))
             coordinates.append(((i - 1, +distance), (i, +distance), (i + 1, +distance)))
@@ -206,7 +206,8 @@ def _patch(inputs: Array, padding: tuple, offset: tuple, pad_value: float) -> Ar
     inputs_shape = inputs.shape
     inputs = jnp.pad(inputs, padding, mode="constant", constant_values=pad_value)
     output = inputs[*patch_index]
-    output = jnp.reshape(output, (*inputs_shape, patch_count, patch_size))
+    output = jnp.reshape(output, (patch_count, *inputs_shape, patch_size))
+    output = jnp.moveaxis(output, 0, -2)
     return output
 
 

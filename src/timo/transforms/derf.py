@@ -9,14 +9,14 @@ from jax import Array
 from timo.factory import Factory
 from timo.transform import Transform
 from flax import nnx
-from jax import numpy as jnp
+from jax.lax import erf
 
 
 default_scale_init = nnx.nn.initializers.ones_init()
 default_bias_init = nnx.nn.initializers.zeros_init()
 
 
-class DynTanh(Factory[Array, Array]):
+class Derf(Factory[Array, Array]):
     on: NamedAxisField
     bias: bool = True
     wide: bool = False
@@ -37,4 +37,4 @@ def dyntanh(inputs: Array, scale: nnx.Param, bias: nnx.Param | None):
     outputs = inputs * scale
     if bias is not None:
         outputs = outputs + bias
-    return jnp.tanh(outputs)
+    return erf(outputs)

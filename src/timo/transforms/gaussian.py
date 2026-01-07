@@ -24,6 +24,8 @@ class Gaussian(Factory[Array, Array]):
     symetric: bool = True
     center_init: Callable = default_center_init
     scale_init: Callable = default_scale_init
+    center_transform: Callable[[Array], Array] | None = None
+    scale_transform: Callable[[Array], Array] | None = None
 
     def create_transform(self, ctx: Context):
         from timo.sized_named_axis import size
@@ -47,27 +49,45 @@ class Gaussian(Factory[Array, Array]):
                 axis=-1,
             )
         transform = gaussian
-        transform = nnx.vmap(transform, in_axes=(None, -1, -1, None), out_axes=-1)
+        transform = nnx.vmap(transform, in_axes=(None, -1, -1, None, None, None), out_axes=-1)
         if self.exclusive and to_size > 1:
             transform = exclusive(transform, to_size)
-        transform = self.vmap(transform, (None,) * 3, self.on)
+        transform = self.vmap(transform, (None,) * 5, self.on)
         return Transform[Array, Array](
             transform,
             ctx,
             self,
             output_shape,
             data={"center": center, "scale": scale},
-            static={"symetric": self.symetric},
+            static={
+                "symetric": self.symetric,
+                "center_transform": self.center_transform,
+                "scale_transform": self.scale_transform,
+            },
         )
 
 
-def gaussian(inputs: Array, center: Array, scale: Array, symetric: bool):
+def gaussian(
+    inputs: Array,
+    center: Array,
+    scale: Array,
+    symetric: bool,
+    center_transform: Callable[[Array], Array] | None,
+    scale_transform: Callable[[Array], Array] | None,
+):
+    if center_transform is not None:
+        center = center_transform(center)
+
     delta = inputs - center
     if symetric:
         scale_tril = jnp.tril(scale)
         scale_tril1 = jnp.tril(scale, -1)
         symetric_scale = scale_tril + scale_tril1.T
         scale = symetric_scale
+
+    if scale_transform is not None:
+        scale = scale_transform(scale)
+
     outputs = jnp.exp(-abs((delta.transpose() @ scale @ delta)))
     return outputs
 
@@ -81,22 +101,16 @@ def exclusive(transform, to: int):
                 i_others.append(j)
     others = jnp.array(others)
 
-    def exclusive_transform(inputs: Array, center: nnx.Param[Array], scale: nnx.Param[Array], symetric: bool):
-        outputs = transform(inputs, center, scale, symetric)
+    def exclusive_transform(
+        inputs: Array,
+        center: nnx.Param[Array],
+        scale: nnx.Param[Array],
+        symetric: bool,
+        center_transform: Callable[[Array], Array] | None,
+        scale_transform: Callable[[Array], Array] | None,
+    ):
+        outputs = transform(inputs, center, scale, symetric, center_transform, scale_transform)
         max_other_output = stop_gradient(outputs)[others].max(-1)
         return outputs * (1 - max_other_output)
 
     return exclusive_transform
-
-
-def gaussian_transform_loss(create_inputs: Callable[[Array, Array, nnx.Rngs], Array]):
-
-    def loss(transform: Transform, rngs: nnx.Rngs):
-        center = transform.data["center"]
-        inputs = create_inputs(center, transform.data["scale"], rngs)
-        result = transform(inputs)
-        diag = jnp.diag_indices(center.shape[1])
-        result = result[*diag]
-        return nnx.relu(1 - result - 0.3)
-
-    return loss
